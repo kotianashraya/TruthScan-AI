@@ -1,0 +1,6 @@
+{
+  "name": "truthscan-ai-backend",
+  "private": true,
+  "type": "module",
+  "description": "Firebase backend scaffold. Functions are intentionally not implemented yet."
+}

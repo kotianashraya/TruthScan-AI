@@ -1,19 +1,18 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# TruthScan AI
 
-# Run and deploy your AI Studio app
+AI-powered product authenticity verification platform.
 
-This contains everything you need to run your app locally.
-https://ai.studio/apps/3c4568d0-f58b-4848-87a7-69ddb918624e
+## Development
 
-## Run Locally
+From the repository root:
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+npm run dev
+```
 
+The React/Vite application lives in `frontend/`. Firebase backend scaffolding,
+AI workspace placeholders, and technical documentation live in their respective
+top-level directories.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+See [docs/README.md](docs/README.md) for the documentation index.

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { X, Check, ArrowRight, Loader2, Award, Users, ShieldAlert } from 'lucide-react';
 import confetti from 'canvas-confetti';
 

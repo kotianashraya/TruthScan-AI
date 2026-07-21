@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, orderBy, query, limit } from 'firebase/firestore';
-import { db } from '../firebase';
-import { ScanReport, ScanFeature } from '../types';
+import { db } from '@/firebase';
+import { ScanReport, ScanFeature } from '@/models/scan';
 import { 
   Upload, Sparkles, CheckCircle2, AlertTriangle, XCircle, 
   RefreshCw, FileText, Share2, History, Database, Camera, Layers, Gauge
