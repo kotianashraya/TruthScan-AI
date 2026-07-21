@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "databaseId": "ai-studio-truthscanai-3c4568d0-f58b-4848-87a7-69ddb918624e",
+    "rules": "firestore.rules",
+    "edition": "ENTERPRISE",
+    "dataAccessMode": "FIRESTORE_NATIVE"
+  }
+}

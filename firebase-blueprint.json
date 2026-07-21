@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "Scan": {
+      "title": "Scan",
+      "description": "Represents an authenticity verification scan record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "authenticityScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["genuine", "suspicious", "counterfeit"] },
+        "detectedFeatures": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "imageUrl", "authenticityScore", "status", "createdAt"]
+    },
+    "WaitlistLead": {
+      "title": "WaitlistLead",
+      "description": "Information captured from users joining the waitlist.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "volume": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "scans/{scanId}": {
+      "schema": "Scan",
+      "description": "Collection of authenticity scan reports."
+    },
+    "waitlist_leads/{leadId}": {
+      "schema": "WaitlistLead",
+      "description": "Leads of users who joined the TruthScan AI waitlist."
+    }
+  }
+}
