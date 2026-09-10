@@ -1,15 +1,43 @@
 rules_version = '2';
+
 service cloud.firestore {
+
   match /databases/{database}/documents {
-    // Authenticity scans are publicly readable and writable for simulation and historical logging.
+
+    // Existing scan functionality.
+    // Keep this unchanged for now.
     match /scans/{scanId} {
       allow read, write: if true;
     }
-    
-    // Waitlist submissions are publicly writable so users can register.
+
+    // Existing waitlist functionality.
+    // Keep this unchanged for now.
     match /waitlist_leads/{leadId} {
       allow read, write: if true;
-      allow read: if false; // Only admin or internal triggers should read waitlist leads in production, but we can allow read in demo if needed. For safety, let's keep it write-only or public-read for waitlist counter. Let's do write: if true; and read: if true; so the UI can show the current waitlist size (queue count)!
+    }
+
+    // User profiles.
+    match /users/{uid} {
+
+      // A signed-in user can create only their own profile.
+      allow create:
+        if request.auth != null
+        && request.auth.uid == uid;
+
+      // A signed-in user can read only their own profile.
+      allow read:
+        if request.auth != null
+        && request.auth.uid == uid;
+
+      // A signed-in user can update only their own profile.
+      allow update:
+        if request.auth != null
+        && request.auth.uid == uid;
+
+      // A signed-in user can delete only their own profile.
+      allow delete:
+        if request.auth != null
+        && request.auth.uid == uid;
     }
   }
 }

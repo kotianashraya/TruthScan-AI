@@ -1,0 +1,60 @@
+import React from 'react';
+import { ProductDetectionResult } from '@/types/ProductDetectionResult';
+
+export default function ProductInfoCard({ result }: { result: ProductDetectionResult }) {
+  const ocrStatus = result.ocr?.status ?? 'failed';
+  const hasReadableText = !!result.ocr?.rawText && result.ocr.rawText.trim().length > 0;
+
+  return (
+    <div className="p-4 bg-white/5 rounded-lg">
+      <h4 className="font-semibold">Product Information</h4>
+      <div className="mt-3 text-sm grid grid-cols-2 gap-3">
+        <div>
+          <div className="text-xs text-gray-400">Brand</div>
+          <div className="font-medium">{result.productInfo.brand ?? 'Not detected'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-400">Product Name</div>
+          <div className="font-medium">{result.productInfo.productName ?? 'Not detected'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-400">Batch Number</div>
+          <div className="font-medium">{result.productInfo.batchNumber ?? 'Not detected'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-400">Expiry Date</div>
+          <div className="font-medium">{result.productInfo.expiryDate ?? 'Not detected'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-400">Barcode</div>
+          <div className="font-medium">{result.barcode.detected ? `${result.barcode.format} — ${result.barcode.value}` : 'Not detected'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-400">QR Code</div>
+          <div className="font-medium">{result.qr.detected ? (result.qr.url ?? result.qr.rawValue) : 'Not detected'}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-white/10 pt-4">
+        <div className="text-xs text-gray-400">OCR Status</div>
+        <div className="mt-1 text-sm font-medium">
+          {ocrStatus === 'failed' ? 'Failed' : ocrStatus === 'success' ? 'Success' : 'Completed'}
+        </div>
+
+        {ocrStatus === 'failed' ? (
+          <div className="mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded text-sm text-rose-200">
+            <div className="font-semibold">Reason</div>
+            <div className="mt-1 break-words">{result.ocr?.error ?? 'OCR failed unexpectedly.'}</div>
+          </div>
+        ) : ocrStatus === 'success' && hasReadableText ? (
+          <>
+            <div className="mt-3 text-xs text-gray-400">Extracted Text</div>
+            <div className="mt-2 p-3 bg-black/30 rounded text-sm font-mono max-h-40 overflow-auto whitespace-pre-wrap">{result.ocr?.rawText}</div>
+          </>
+        ) : (
+          <div className="mt-3 p-3 bg-white/5 rounded text-sm text-gray-300">No readable text detected in this image.</div>
+        )}
+      </div>
+    </div>
+  );
+}
