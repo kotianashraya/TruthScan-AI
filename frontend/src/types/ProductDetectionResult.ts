@@ -32,6 +32,9 @@ export interface ProductInfo {
   batchNumber?: string | null;
   lotNumber?: string | null;
   mrp?: string | null;
+  spf?: string | null;
+  productFeatures?: string[] | null;
+  parserConfidence?: number;
   expiryDate?: string | null;
   manufacturingDate?: string | null;
 }

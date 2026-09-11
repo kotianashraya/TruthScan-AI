@@ -19,6 +19,10 @@ export default function ProductInfoCard({ result }: { result: ProductDetectionRe
           <div className="font-medium">{value(result.productInfo.productName)}</div>
         </div>
         <div>
+          <div className="text-xs text-gray-400">SPF</div>
+          <div className="font-medium">{value(result.productInfo.spf)}</div>
+        </div>
+        <div>
           <div className="text-xs text-gray-400">Batch Number</div>
           <div className="font-medium">{value(result.productInfo.batchNumber)}</div>
         </div>
@@ -43,6 +47,10 @@ export default function ProductInfoCard({ result }: { result: ProductDetectionRe
           <div className="font-medium">{value(result.productInfo.netWeight || result.productInfo.volume)}</div>
         </div>
         <div>
+          <div className="text-xs text-gray-400">Product Features</div>
+          <div className="font-medium">{result.productInfo.productFeatures?.join(', ') || 'Not detected'}</div>
+        </div>
+        <div>
           <div className="text-xs text-gray-400">Barcode</div>
           <div className="font-medium">{result.barcode.detected ? `${result.barcode.format} — ${result.barcode.value}` : 'Not detected'}</div>
         </div>
@@ -54,6 +62,10 @@ export default function ProductInfoCard({ result }: { result: ProductDetectionRe
 
       <div className="mt-4 border-t border-white/10 pt-4">
         <h4 className="font-semibold uppercase tracking-wide">Detection Results</h4>
+        <div className="mt-3 text-sm">
+          <div className="text-xs text-gray-400">Product Information Completeness</div>
+          <div className="font-medium">{result.productInfo.parserConfidence ?? 0}%</div>
+        </div>
         <div className="mt-3 text-xs text-gray-400">OCR Status</div>
         <div className="mt-1 text-sm font-medium">
           {ocrStatus === 'failed' ? 'Failed' : ocrStatus === 'success' ? 'Success' : 'Completed'}
