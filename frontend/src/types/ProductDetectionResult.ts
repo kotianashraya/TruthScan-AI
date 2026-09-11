@@ -14,6 +14,7 @@ export interface OCRResult {
   status: 'success' | 'completed' | 'failed';
   rawText: string;
   confidence?: number | null;
+  durationMs?: number;
   error?: string | null;
 }
 
@@ -24,6 +25,8 @@ export interface ProductInfo {
   variant?: string | null;
   quantity?: string | null;
   ingredients?: string[] | null;
+  netWeight?: string | null;
+  volume?: string | null;
   manufacturer?: string | null;
   countryOfOrigin?: string | null;
   batchNumber?: string | null;
@@ -37,6 +40,13 @@ export interface ProductDetectionResult {
   imageUrl: string;
   processingTimeMs: number;
   ocrProcessingTimeMs?: number;
+  timings?: {
+    qrDetectionTimeMs: number;
+    barcodeDetectionTimeMs: number;
+    ocrInitializationTimeMs: number;
+    ocrRecognitionTimeMs: number;
+    productParsingTimeMs: number;
+  };
   qr: QRResult;
   barcode: BarcodeResult;
   ocr: OCRResult | null;

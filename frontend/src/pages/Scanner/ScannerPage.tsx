@@ -5,6 +5,7 @@ import ImagePreview from '@/components/scanner/ImagePreview';
 import ScannerInstructions from '@/components/scanner/ScannerInstructions';
 import ProductAnalyzer from '@/components/scanner/ProductAnalyzer';
 import ProductInfoCard from '@/components/scanner/ProductInfoCard';
+import { ProductDetectionResult } from '@/types/ProductDetectionResult';
 
 type State = 'idle' | 'camera' | 'preview' | 'processing' | 'completed' | 'error';
 
@@ -50,7 +51,7 @@ export default function ScannerPage() {
     setState('camera');
   };
 
-  const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<ProductDetectionResult | null>(null);
 
   const handleContinue = () => {
     // start analysis

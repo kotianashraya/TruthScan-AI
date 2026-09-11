@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BarcodeFormat } from '@zxing/library';
 import { SelectedFile } from './ScannerUpload';
 import { detectBarcodeFromImage } from '@/services/scanner/barcodeService';
 import { performOCR } from '@/services/scanner/ocrService';
@@ -25,18 +26,52 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           img.onerror = () => reject(new Error('Image failed to load'));
         });
 
-        setStatus('Detecting QR code...');
+        setStatus('Scanning QR code...');
+        const qrStart = performance.now();
+        let qrResult = null;
+        try {
+          qrResult = await detectBarcodeFromImage(img, [BarcodeFormat.QR_CODE]);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          analysisErrors.push(`QR detection failed: ${message}`);
+          setErrors([...analysisErrors]);
+        }
+        const qrDetectionTimeMs = performance.now() - qrStart;
+
+        setStatus('Scanning barcode...');
+        const barcodeStart = performance.now();
         let barcodeResult = null;
         try {
-          barcodeResult = await detectBarcodeFromImage(img);
+          barcodeResult = await detectBarcodeFromImage(img, [
+            BarcodeFormat.AZTEC,
+            BarcodeFormat.CODABAR,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.CODE_93,
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.DATA_MATRIX,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.ITF,
+            BarcodeFormat.PDF_417,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E
+          ]);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           analysisErrors.push(`Barcode detection failed: ${message}`);
           setErrors([...analysisErrors]);
         }
+        const barcodeDetectionTimeMs = performance.now() - barcodeStart;
+        console.debug('[Scanner] QR detection time:', qrDetectionTimeMs, 'ms');
+        console.debug('[Scanner] Barcode detection time:', barcodeDetectionTimeMs, 'ms');
 
-        setStatus('Initializing OCR engine...');
-        let ocrResult: { text: string; confidence: number | null } | null = null;
+        setStatus('Extracting product text...');
+        let ocrResult: {
+          text: string;
+          confidence: number | null;
+          initializationTimeMs: number;
+          recognitionTimeMs: number;
+        } | null = null;
         let ocrStatus: 'success' | 'completed' | 'failed' = 'completed';
         let ocrError: string | null = null;
         let ocrProcessingTimeMs = 0;
@@ -62,30 +97,43 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             }
           });
           ocrProcessingTimeMs = performance.now() - ocrStart;
-          console.debug('[OCR] Time:', ocrProcessingTimeMs);
+          console.debug('[OCR] initialization time:', ocrResult.initializationTimeMs, 'ms');
+          console.debug('[OCR] recognition time:', ocrResult.recognitionTimeMs, 'ms');
+          console.debug('[OCR] total time:', ocrProcessingTimeMs, 'ms');
 
           if (ocrResult.text.trim()) {
             ocrStatus = 'success';
           }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          ocrError = `OCR failed: ${message}`;
+          console.error('[OCR] analyzer error', error);
+          ocrError = 'OCR could not process this image. Please try a clearer image.';
           analysisErrors.push(ocrError);
           setErrors([...analysisErrors]);
           ocrStatus = 'failed';
         }
 
         const rawText = ocrResult?.text ?? '';
+        const parserStart = performance.now();
+        setStatus('Parsing product information...');
         const productInfo = rawText.trim() ? parseProductInfo(rawText) : {};
+        const productParsingTimeMs = performance.now() - parserStart;
+        console.debug('[Scanner] product parsing time:', productParsingTimeMs, 'ms');
 
         const result: ProductDetectionResult = {
           imageUrl: file.url,
           processingTimeMs: Math.round(performance.now() - start),
           ocrProcessingTimeMs,
+          timings: {
+            qrDetectionTimeMs,
+            barcodeDetectionTimeMs,
+            ocrInitializationTimeMs: ocrResult?.initializationTimeMs ?? 0,
+            ocrRecognitionTimeMs: ocrResult?.recognitionTimeMs ?? 0,
+            productParsingTimeMs
+          },
           qr: {
-            detected: !!barcodeResult && barcodeResult.format === 'QR_CODE',
-            rawValue: barcodeResult ? barcodeResult.value : null,
-            url: barcodeResult && barcodeResult.value && /^https?:\/\//i.test(barcodeResult.value) ? barcodeResult.value : null
+            detected: !!qrResult && qrResult.format === 'QR_CODE',
+            rawValue: qrResult ? qrResult.value : null,
+            url: qrResult && qrResult.value && /^https?:\/\//i.test(qrResult.value) ? qrResult.value : null
           },
           barcode: {
             detected: !!barcodeResult && barcodeResult.format !== 'QR_CODE',
@@ -96,6 +144,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             status: ocrStatus,
             rawText,
             confidence: ocrResult?.confidence ?? null,
+            durationMs: ocrProcessingTimeMs,
             error: ocrError
           },
           productInfo,
