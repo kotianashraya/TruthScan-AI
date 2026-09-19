@@ -35,6 +35,10 @@ export default function ProductInfoCard({ result }: { result: ProductDetectionRe
           <div className="font-medium">{value(result.productInfo.expiryDate)}</div>
         </div>
         <div>
+          <div className="text-xs text-gray-400">Detected Date</div>
+          <div className="font-medium">{value(result.productInfo.detectedDate)}</div>
+        </div>
+        <div>
           <div className="text-xs text-gray-400">MRP / Price</div>
           <div className="font-medium">{value(result.productInfo.mrp)}</div>
         </div>

@@ -19,12 +19,14 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
       setStatus('Loading image...');
 
       try {
+        const imageLoadStart = performance.now();
         const img = document.createElement('img');
         img.src = file.url;
         await new Promise<void>((resolve, reject) => {
           img.onload = () => resolve();
           img.onerror = () => reject(new Error('Image failed to load'));
         });
+        const imageLoadingTimeMs = performance.now() - imageLoadStart;
 
         setStatus('Scanning QR code...');
         const qrStart = performance.now();
@@ -37,6 +39,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           setErrors([...analysisErrors]);
         }
         const qrDetectionTimeMs = performance.now() - qrStart;
+        if (!qrResult) console.debug('[Scanner] QR not detected; continuing to barcode');
 
         setStatus('Scanning barcode...');
         const barcodeStart = performance.now();
@@ -53,8 +56,12 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             BarcodeFormat.EAN_13,
             BarcodeFormat.ITF,
             BarcodeFormat.PDF_417,
+            BarcodeFormat.RSS_14,
+            BarcodeFormat.RSS_EXPANDED,
             BarcodeFormat.UPC_A,
-            BarcodeFormat.UPC_E
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.UPC_EAN_EXTENSION,
+            BarcodeFormat.MAXICODE
           ]);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -62,6 +69,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           setErrors([...analysisErrors]);
         }
         const barcodeDetectionTimeMs = performance.now() - barcodeStart;
+        if (!barcodeResult) console.debug('[Scanner] Barcode not detected; continuing to OCR');
         console.debug('[Scanner] QR detection time:', qrDetectionTimeMs, 'ms');
         console.debug('[Scanner] Barcode detection time:', barcodeDetectionTimeMs, 'ms');
 
@@ -70,6 +78,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           text: string;
           confidence: number | null;
           initializationTimeMs: number;
+          preprocessingTimeMs: number;
           recognitionTimeMs: number;
         } | null = null;
         let ocrStatus: 'success' | 'completed' | 'failed' = 'completed';
@@ -124,9 +133,11 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           processingTimeMs: Math.round(performance.now() - start),
           ocrProcessingTimeMs,
           timings: {
+            imageLoadingTimeMs,
             qrDetectionTimeMs,
             barcodeDetectionTimeMs,
             ocrInitializationTimeMs: ocrResult?.initializationTimeMs ?? 0,
+            ocrPreprocessingTimeMs: ocrResult?.preprocessingTimeMs ?? 0,
             ocrRecognitionTimeMs: ocrResult?.recognitionTimeMs ?? 0,
             productParsingTimeMs
           },

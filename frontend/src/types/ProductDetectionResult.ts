@@ -37,16 +37,19 @@ export interface ProductInfo {
   parserConfidence?: number;
   expiryDate?: string | null;
   manufacturingDate?: string | null;
+  detectedDate?: string | null;
 }
 
 export interface ProductDetectionResult {
-  imageUrl: string;
+  imageUrl: string | null;
   processingTimeMs: number;
   ocrProcessingTimeMs?: number;
   timings?: {
+    imageLoadingTimeMs: number;
     qrDetectionTimeMs: number;
     barcodeDetectionTimeMs: number;
     ocrInitializationTimeMs: number;
+    ocrPreprocessingTimeMs: number;
     ocrRecognitionTimeMs: number;
     productParsingTimeMs: number;
   };

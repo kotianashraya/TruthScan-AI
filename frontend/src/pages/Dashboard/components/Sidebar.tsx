@@ -1,10 +1,10 @@
 import { LogOut, Home, Search, FileText, User, Settings2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Sidebar() {
   const { currentUser, signOut } = useAuth();
-  const navigate = useNavigate();
+  const navClass = ({ isActive }: { isActive: boolean }) => `flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 ${isActive ? 'bg-white/5 text-white' : 'text-gray-300'}`;
 
   return (
     <aside className="w-72 bg-[#07101a]/60 text-white h-screen p-4 hidden md:flex flex-col justify-between">
@@ -15,24 +15,24 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1">
-          <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          <NavLink to="/" end className={navClass}>
             <Home className="w-4 h-4 text-cyan-400" /> <span>Dashboard</span>
-          </Link>
-          <Link to="/scanner" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          </NavLink>
+          <NavLink to="/scanner" className={navClass}>
             <Search className="w-4 h-4 text-cyan-400" /> <span>Scan Product</span>
-          </Link>
-          <Link to="/history" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          </NavLink>
+          <NavLink to="/history" className={navClass}>
             <FileText className="w-4 h-4 text-cyan-400" /> <span>Scan History</span>
-          </Link>
-          <Link to="/reports" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          </NavLink>
+          <NavLink to="/reports" className={navClass}>
             <FileText className="w-4 h-4 text-cyan-400" /> <span>Reports</span>
-          </Link>
-          <Link to="/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          </NavLink>
+          <NavLink to="/profile" className={navClass}>
             <User className="w-4 h-4 text-cyan-400" /> <span>Profile</span>
-          </Link>
-          <Link to="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+          </NavLink>
+          <NavLink to="/settings" className={navClass}>
             <Settings2 className="w-4 h-4 text-cyan-400" /> <span>Settings</span>
-          </Link>
+          </NavLink>
         </nav>
       </div>
 

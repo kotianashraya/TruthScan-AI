@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,13 +8,16 @@ import { getAuthErrorMessage } from '@/services/authService';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, currentUser, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  if (loading) return <div className="min-h-screen bg-[#030712] text-gray-400 flex items-center justify-center font-mono text-sm">Loading secure session...</div>;
+  if (currentUser) return <Navigate to="/" replace />;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,7 +27,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+      const from = (location.state as { from?: string } | null)?.from ?? '/';
       navigate(from, { replace: true });
     } catch (authError) {
       setError(getAuthErrorMessage(authError));

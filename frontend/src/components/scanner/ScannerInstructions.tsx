@@ -10,6 +10,7 @@ export default function ScannerInstructions() {
         <li>• Avoid glare</li>
         <li>• Capture the complete packaging</li>
         <li>• Keep text and labels visible</li>
+        <li>• Supported: JPG, PNG, WebP, HEIC/HEIF, AVIF, GIF, BMP, TIFF</li>
       </ul>
     </div>
   );

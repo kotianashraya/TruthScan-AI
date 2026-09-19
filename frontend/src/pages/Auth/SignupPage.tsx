@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { ErrorMessage, Field } from './LoginPage';
@@ -9,7 +9,7 @@ import { getAuthErrorMessage, UserProfileError } from '@/services/authService';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupPage() {
-  const { signUp, retryUserProfileSetup } = useAuth();
+  const { signUp, retryUserProfileSetup, currentUser, loading } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -19,10 +19,13 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [profileSetupFailed, setProfileSetupFailed] = useState(false);
 
+  if (loading) return <div className="min-h-screen bg-[#030712] text-gray-400 flex items-center justify-center font-mono text-sm">Loading secure session...</div>;
+  if (currentUser) return <Navigate to="/" replace />;
+
   const redirectToDashboard = () => {
     try {
       console.info('[NAV] redirecting user');
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     } catch (navigationError) {
       console.error('[NAVIGATION ERROR] redirect failed', {
         operation: 'redirect-to-dashboard',

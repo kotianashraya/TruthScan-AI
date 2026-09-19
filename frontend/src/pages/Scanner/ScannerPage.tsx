@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ScannerUpload, { SelectedFile } from '@/components/scanner/ScannerUpload';
 import CameraCapture from '@/components/scanner/CameraCapture';
 import ImagePreview from '@/components/scanner/ImagePreview';
@@ -6,14 +6,21 @@ import ScannerInstructions from '@/components/scanner/ScannerInstructions';
 import ProductAnalyzer from '@/components/scanner/ProductAnalyzer';
 import ProductInfoCard from '@/components/scanner/ProductInfoCard';
 import { ProductDetectionResult } from '@/types/ProductDetectionResult';
+import { saveScan } from '@/services/scanService';
+import { useAuth } from '@/hooks/useAuth';
 
 type State = 'idle' | 'camera' | 'preview' | 'processing' | 'completed' | 'error';
+type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 
 export default function ScannerPage() {
+  const { currentUser } = useAuth();
   const [state, setState] = useState<State>('idle');
   const [selected, setSelected] = useState<SelectedFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | undefined>(undefined);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const savedFileKey = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -27,6 +34,9 @@ export default function ScannerPage() {
     setFileSize(s.file.size);
     setState('preview');
     setError(null);
+    setSaveState('idle');
+    setSaveError(null);
+    savedFileKey.current = null;
   };
 
   const handleCapture = (blob: Blob) => {
@@ -37,6 +47,9 @@ export default function ScannerPage() {
     setFileSize(file.size);
     setState('preview');
     setError(null);
+    setSaveState('idle');
+    setSaveError(null);
+    savedFileKey.current = null;
   };
 
   const handleRemove = () => {
@@ -44,6 +57,9 @@ export default function ScannerPage() {
     setSelected(null);
     setFileSize(undefined);
     setState('idle');
+    setSaveState('idle');
+    setSaveError(null);
+    savedFileKey.current = null;
   };
 
   const handleRetake = () => {
@@ -57,6 +73,35 @@ export default function ScannerPage() {
     // start analysis
     setState('processing');
     setAnalysisResult(null);
+  };
+
+  const saveAnalysis = async (result: ProductDetectionResult) => {
+    if (!currentUser) {
+      setSaveState('failed');
+      setSaveError('Your session expired. Sign in again before saving this scan.');
+      return;
+    }
+
+    const fileKey = `${selected?.file.name}:${selected?.file.size}:${selected?.file.lastModified}`;
+    if (savedFileKey.current === fileKey) return;
+    savedFileKey.current = fileKey;
+    setSaveState('saving');
+    setSaveError(null);
+    try {
+      await saveScan(currentUser.uid, result);
+      setSaveState('saved');
+    } catch (saveFailure) {
+      savedFileKey.current = null;
+      setSaveState('failed');
+      setSaveError('The scan was analyzed, but it could not be saved. Please retry.');
+      console.error('[SCANNER] scan save failed', saveFailure);
+    }
+  };
+
+  const handleAnalysisComplete = (result: ProductDetectionResult) => {
+    setAnalysisResult(result);
+    setState('completed');
+    void saveAnalysis(result);
   };
 
   return (
@@ -87,15 +132,26 @@ export default function ScannerPage() {
 
               {state === 'processing' && selected && (
                 <div>
-                  <ProductAnalyzer file={selected} onComplete={(res) => { setAnalysisResult(res); setState('completed'); }} />
+                  <ProductAnalyzer file={selected} onComplete={handleAnalysisComplete} />
                 </div>
               )}
 
               {state === 'completed' && analysisResult && (
                 <div>
                   <div className="p-4 bg-white/5 rounded mb-4">
-                    <div className="text-sm">Analysis complete — ready for Phase 3C verification.</div>
+                    <div className="text-sm">Analysis complete.</div>
                     <div className="text-xs text-gray-400">Processing time: {analysisResult.processingTimeMs} ms</div>
+                    <div className="text-xs mt-1 text-gray-400">
+                      {saveState === 'saving' && 'Saving scan...'}
+                      {saveState === 'saved' && 'Scan saved to your history.'}
+                      {saveState === 'failed' && 'Scan save failed.'}
+                    </div>
+                    {saveState === 'failed' && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="text-xs text-rose-300">{saveError}</span>
+                        <button onClick={() => void saveAnalysis(analysisResult)} className="px-3 py-1 rounded bg-white/10 text-xs">Retry Save</button>
+                      </div>
+                    )}
                   </div>
                   <ProductInfoCard result={analysisResult} />
                 </div>

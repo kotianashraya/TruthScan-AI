@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, orderBy, query, limit } from 'firebase/firestore';
-import { db } from '@/firebase';
+import React, { useState } from 'react';
 import { ScanReport, ScanFeature } from '@/models/scan';
 import { 
   Upload, Sparkles, CheckCircle2, AlertTriangle, XCircle, 
@@ -109,26 +107,6 @@ export default function LiveScanner() {
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // Load history from Firestore
-  const fetchScanHistory = async () => {
-    try {
-      const qSnapshot = await getDocs(
-        query(collection(db, 'scans'), orderBy('createdAt', 'desc'), limit(10))
-      );
-      const hist: ScanReport[] = [];
-      qSnapshot.forEach((doc) => {
-        hist.push({ id: doc.id, ...doc.data() } as ScanReport);
-      });
-      setReports(hist);
-    } catch (err) {
-      console.error('Error fetching scans:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchScanHistory();
-  }, []);
-
   // Preset Selection
   const handleSelectPreset = (preset: typeof PRESETS[0]) => {
     if (isScanning) return;
@@ -191,8 +169,7 @@ export default function LiveScanner() {
     }, 700);
   };
 
-  const completeScan = async () => {
-    // Generate a beautiful, realistic scan report based on either active preset or uploaded custom image
+  const completeScan = () => {
     let baseReport: Omit<ScanReport, 'id'>;
 
     if (selectedPreset) {
@@ -207,42 +184,30 @@ export default function LiveScanner() {
         createdAt: new Date().toISOString()
       };
     } else {
-      // Calculate randomized dynamic but realistic parameters for custom user upload
-      const score = Math.floor(Math.random() * 45) + 55; // 55% - 100%
+      const score = Math.floor(Math.random() * 45) + 55;
       const status = score > 85 ? 'genuine' : score > 70 ? 'suspicious' : 'counterfeit';
-      
       baseReport = {
         imageUrl: customImage || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=600',
         authenticityScore: score,
-        status: status,
+        status,
         brand: 'Analyzed Item',
         productName: 'User Custom Scan Product',
-        detectedFeatures: [
-          { label: 'Surface Brand Typeface', confidence: parseFloat((Math.random() * 0.15 + 0.8).toFixed(2)), x: 20, y: 35, width: 60, height: 15 },
-          { label: 'Container Bottom Coding', confidence: parseFloat((Math.random() * 0.15 + 0.8).toFixed(2)), x: 30, y: 75, width: 40, height: 10 }
-        ],
+        detectedFeatures: [],
         analysisDetails: {
-          logoPlacement: parseFloat((Math.random() * 15 + 85).toFixed(1)),
-          typographyKerning: parseFloat((Math.random() * 15 + 85).toFixed(1)),
-          packagingReflectivity: parseFloat((Math.random() * 20 + 75).toFixed(1)),
-          barcodeMatch: Math.random() > 0.3,
-          batchCode: 'TS-' + Math.floor(100000 + Math.random() * 900000)
+          logoPlacement: 0,
+          typographyKerning: 0,
+          packagingReflectivity: 0,
+          barcodeMatch: false,
+          batchCode: ''
         },
         createdAt: new Date().toISOString()
       };
     }
 
-    try {
-      // Write to Firestore collection "scans"
-      const docRef = await addDoc(collection(db, 'scans'), baseReport);
-      const savedReport = { id: docRef.id, ...baseReport };
-      setActiveReport(savedReport);
-      setIsScanning(false);
-      fetchScanHistory(); // Refresh historical logs
-    } catch (err) {
-      console.error('Error saving scan to Firestore:', err);
-      setIsScanning(false);
-    }
+    const savedReport = { id: `${Date.now()}-${selectedPreset?.id ?? 'custom'}`, ...baseReport };
+    setReports((previous) => [savedReport, ...previous].slice(0, 10));
+    setActiveReport(savedReport);
+    setIsScanning(false);
   };
 
   const handleShareReport = (id: string) => {

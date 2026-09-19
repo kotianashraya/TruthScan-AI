@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { db } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { formatScanDate, getUserScans } from '@/services/scanService';
 
 export default function RecentScans() {
   const { currentUser } = useAuth();
@@ -11,9 +10,8 @@ export default function RecentScans() {
     if (!currentUser) return;
     const load = async () => {
       try {
-        const q = query(collection(db, 'scans'), where('uid', '==', currentUser.uid), orderBy('createdAt', 'desc'), limit(5));
-        const snap = await getDocs(q);
-        setScans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const records = await getUserScans(currentUser.uid);
+        setScans(records.slice(0, 5));
       } catch (e) {
         setScans([]);
       }
@@ -49,9 +47,9 @@ export default function RecentScans() {
             <tr key={s.id} className="border-t border-white/5">
               <td className="p-3">{s.productName ?? '—'}</td>
               <td className="p-3">{s.brand ?? '—'}</td>
-              <td className="p-3">{s.createdAt?.toDate ? s.createdAt.toDate().toLocaleString() : (s.createdAt ?? '—')}</td>
-              <td className="p-3">{s.result ?? 'Pending'}</td>
-              <td className="p-3">{s.confidence ? `${Math.round(s.confidence * 100)}%` : '—'}</td>
+              <td className="p-3">{formatScanDate(s.createdAt)}</td>
+              <td className="p-3">{s.scanStatus}</td>
+              <td className="p-3">{s.ocr?.confidence == null ? '—' : `${Math.round(s.ocr.confidence * 100)}%`}</td>
               <td className="p-3"><a className="text-cyan-300" href={`/history`}>View</a></td>
             </tr>
           ))}

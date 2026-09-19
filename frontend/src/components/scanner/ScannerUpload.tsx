@@ -1,7 +1,5 @@
 import React, { useRef, useState, DragEvent } from 'react';
-
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+import { normalizeImageFile, validateImageFile } from '@/services/scanner/imageNormalization';
 
 export interface SelectedFile {
   file: File;
@@ -12,22 +10,25 @@ export default function ScannerUpload({ onSelect, onError }: { onSelect: (f: Sel
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const validateAndSend = (file: File) => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      onError('Unsupported file type. Please use JPG, PNG, or WEBP.');
+  const validateAndSend = async (file: File) => {
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      onError(validationError);
       return;
     }
-    if (file.size > MAX_FILE_SIZE) {
-      onError('File is too large. Maximum size is 10 MB.');
-      return;
+    try {
+      const normalizedFile = await normalizeImageFile(file);
+      const url = URL.createObjectURL(normalizedFile);
+      onSelect({ file: normalizedFile, url });
+    } catch (error) {
+      console.error('[SCANNER] image normalization failed', error);
+      onError('Unable to read this image format. Please try JPG, PNG, or WebP.');
     }
-    const url = URL.createObjectURL(file);
-    onSelect({ file, url });
   };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) validateAndSend(file);
+    if (file) void validateAndSend(file);
     // reset value so same file can be selected again
     if (inputRef.current) inputRef.current.value = '';
   };
@@ -36,7 +37,7 @@ export default function ScannerUpload({ onSelect, onError }: { onSelect: (f: Sel
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) validateAndSend(file);
+    if (file) void validateAndSend(file);
   };
 
   return (
@@ -54,8 +55,8 @@ export default function ScannerUpload({ onSelect, onError }: { onSelect: (f: Sel
         <div className="mt-4 flex gap-3">
           <button onClick={() => { inputRef.current?.click(); }} className="px-4 py-2 rounded-lg bg-cyan-500 text-black font-semibold" aria-label="Upload image">Upload Image</button>
         </div>
-        <input ref={inputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" aria-hidden />
-        <div className="text-xs text-gray-400 mt-3">Supports JPG, PNG, WEBP — max 10 MB</div>
+        <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.avif,.gif,.bmp,.tif,.tiff" onChange={onFileChange} className="hidden" aria-hidden />
+        <div className="text-xs text-gray-400 mt-3">Supported: JPG, PNG, WebP, HEIC/HEIF, AVIF, GIF, BMP, TIFF — max 10 MB</div>
       </div>
     </div>
   );

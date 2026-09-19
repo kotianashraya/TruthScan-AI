@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { db } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { getUserScans } from '@/services/scanService';
 
 export default function AuthenticityOverview() {
   const { currentUser } = useAuth();
@@ -11,13 +10,11 @@ export default function AuthenticityOverview() {
     if (!currentUser) return;
     const load = async () => {
       try {
-        const q = query(collection(db, 'scans'), where('uid', '==', currentUser.uid));
-        const snap = await getDocs(q);
-        const docs = snap.docs.map(d => d.data() as any);
+        const docs = await getUserScans(currentUser.uid);
         setCounts({
-          authentic: docs.filter(d => d.result === 'authentic').length,
-          suspicious: docs.filter(d => d.result === 'suspicious').length,
-          counterfeit: docs.filter(d => d.result === 'counterfeit').length,
+          authentic: docs.filter(d => d.authenticityStatus === 'authentic').length,
+          suspicious: docs.filter(d => d.authenticityStatus === 'suspicious').length,
+          counterfeit: docs.filter(d => d.authenticityStatus === 'counterfeit').length,
         });
       } catch (e) {
         setCounts({ authentic: 0, suspicious: 0, counterfeit: 0 });
