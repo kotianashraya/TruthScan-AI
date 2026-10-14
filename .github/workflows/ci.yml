@@ -35,10 +35,10 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      - name: Install Firebase Functions
-        working-directory: backend/functions
+      - name: Install Cloudflare AI Worker
+        working-directory: workers/truthscan-vision
         run: npm install
 
-      - name: Build Firebase Functions
-        working-directory: backend/functions
-        run: npm run build
+      - name: Typecheck Cloudflare AI Worker
+        working-directory: workers/truthscan-vision
+        run: npm run typecheck
