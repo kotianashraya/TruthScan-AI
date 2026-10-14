@@ -6,6 +6,8 @@ import { performOCR } from '@/services/scanner/ocrService';
 import { parseProductInfo } from '@/services/scanner/productParser';
 import { verifyAgainstDatabase } from '@/services/scanner/productDatabase';
 import { evaluateAuthenticity } from '@/services/scanner/authenticityEngine';
+import { analyzeProductVision } from '@/services/scanner/geminiVisionService';
+import type { VisionAssessment } from '@/types/VisionAssessment';
 import { ProductDetectionResult } from '@/types/ProductDetectionResult';
 
 export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFile; onComplete: (res: ProductDetectionResult) => void; }) {
@@ -175,16 +177,48 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
           errors: analysisErrors
         };
 
+        setStatus('Running multimodal AI vision assessment...');
+        let visionAssessment: VisionAssessment;
+        try {
+          visionAssessment = await analyzeProductVision(file.file, {
+            ocrText: rawText,
+            ocrConfidence: ocrResult?.confidence ?? null,
+            productInfo,
+            barcode: barcodeData,
+            qr: qrData
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn('[AI Vision] unavailable; continuing deterministic verification', message);
+          visionAssessment = {
+            status: 'UNAVAILABLE',
+            confidence: 0,
+            packagingConsistency: 'NOT_ASSESSABLE',
+            aiRiskHint: 'INCONCLUSIVE',
+            packagingObservations: [],
+            positiveVisualIndicators: [],
+            visualWarningIndicators: [],
+            visibleTextIssues: [],
+            tamperEvidence: [],
+            limitations: ['Multimodal AI vision could not be completed for this scan.'],
+            error: message
+          };
+        }
+
         setStatus('Running AI authenticity evaluation...');
         const authStart = performance.now();
-        const authenticity = evaluateAuthenticity(partialResult);
+        const resultWithVision: ProductDetectionResult = {
+          ...partialResult,
+          visionAssessment
+        };
+        const authenticity = evaluateAuthenticity(resultWithVision);
         const authenticityEvaluationTimeMs = performance.now() - authStart;
 
         const result: ProductDetectionResult = {
-          ...partialResult,
+          ...resultWithVision,
           processingTimeMs: Math.round(performance.now() - start),
           timings: {
-            ...partialResult.timings!,
+            ...resultWithVision.timings!,
             authenticityEvaluationTimeMs
           },
           authenticity
