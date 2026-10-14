@@ -7,9 +7,10 @@
    `backend/functions` before implementation.
 4. Add AI prompts, datasets, model artifacts, and reproducible experiments in
    `ai/`.
-5. Deploy the Firebase callable AI vision function and configure the
-   `GEMINI_API_KEY` secret.
-6. Deploy hardened Firestore and Storage rules to the live Firebase project.
-7. Run authenticated end-to-end scanner tests with representative real product
-   images on desktop and physical Android/iOS devices.
+5. Deploy the free Cloudflare Workers AI vision endpoint.
+6. Deploy Firestore rules and the SPA to Firebase Hosting on Spark.
+7. Run end-to-end scanner tests with representative real product images on
+   desktop and physical Android/iOS devices.
 8. Keep deterministic verification as the fallback when AI vision is unavailable.
+9. Keep Firebase Storage and Cloud Functions optional future upgrades rather
+   than production requirements for the no-payment deployment.
