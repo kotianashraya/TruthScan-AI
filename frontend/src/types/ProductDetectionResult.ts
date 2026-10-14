@@ -1,3 +1,6 @@
+import type { AuthenticityResult } from './AuthenticityResult';
+import type { ProductVerificationResult } from './ProductDatabase';
+
 export interface QRResult {
   detected: boolean;
   rawValue?: string | null;
@@ -52,10 +55,14 @@ export interface ProductDetectionResult {
     ocrPreprocessingTimeMs: number;
     ocrRecognitionTimeMs: number;
     productParsingTimeMs: number;
+    databaseVerificationTimeMs?: number;
+    authenticityEvaluationTimeMs?: number;
   };
   qr: QRResult;
   barcode: BarcodeResult;
   ocr: OCRResult | null;
   productInfo: ProductInfo;
+  databaseVerification?: ProductVerificationResult;
+  authenticity?: AuthenticityResult;
   errors: string[];
 }
