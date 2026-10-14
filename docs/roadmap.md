@@ -7,5 +7,9 @@
    `backend/functions` before implementation.
 4. Add AI prompts, datasets, model artifacts, and reproducible experiments in
    `ai/`.
-5. Reconcile Firebase project configuration and deploy hardened Firestore and
-   Storage policies before production launch.
+5. Deploy the Firebase callable AI vision function and configure the
+   `GEMINI_API_KEY` secret.
+6. Deploy hardened Firestore and Storage rules to the live Firebase project.
+7. Run authenticated end-to-end scanner tests with representative real product
+   images on desktop and physical Android/iOS devices.
+8. Keep deterministic verification as the fallback when AI vision is unavailable.
