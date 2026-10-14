@@ -4,6 +4,8 @@ import { SelectedFile } from './ScannerUpload';
 import { detectBarcodeFromImage } from '@/services/scanner/barcodeService';
 import { performOCR } from '@/services/scanner/ocrService';
 import { parseProductInfo } from '@/services/scanner/productParser';
+import { verifyAgainstDatabase } from '@/services/scanner/productDatabase';
+import { evaluateAuthenticity } from '@/services/scanner/authenticityEngine';
 import { ProductDetectionResult } from '@/types/ProductDetectionResult';
 
 export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFile; onComplete: (res: ProductDetectionResult) => void; }) {
@@ -128,7 +130,24 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
         const productParsingTimeMs = performance.now() - parserStart;
         console.debug('[Scanner] product parsing time:', productParsingTimeMs, 'ms');
 
-        const result: ProductDetectionResult = {
+        const barcodeData = {
+          detected: !!barcodeResult && barcodeResult.format !== 'QR_CODE',
+          format: barcodeResult ? barcodeResult.format : null,
+          value: barcodeResult ? barcodeResult.value : null
+        };
+
+        const qrData = {
+          detected: !!qrResult && qrResult.format === 'QR_CODE',
+          rawValue: qrResult ? qrResult.value : null,
+          url: qrResult && qrResult.value && /^https?:\/\//i.test(qrResult.value) ? qrResult.value : null
+        };
+
+        setStatus('Cross-referencing product catalog...');
+        const dbStart = performance.now();
+        const databaseVerification = verifyAgainstDatabase(productInfo, barcodeData);
+        const databaseVerificationTimeMs = performance.now() - dbStart;
+
+        const partialResult: ProductDetectionResult = {
           imageUrl: file.url,
           processingTimeMs: Math.round(performance.now() - start),
           ocrProcessingTimeMs,
@@ -139,18 +158,11 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             ocrInitializationTimeMs: ocrResult?.initializationTimeMs ?? 0,
             ocrPreprocessingTimeMs: ocrResult?.preprocessingTimeMs ?? 0,
             ocrRecognitionTimeMs: ocrResult?.recognitionTimeMs ?? 0,
-            productParsingTimeMs
+            productParsingTimeMs,
+            databaseVerificationTimeMs
           },
-          qr: {
-            detected: !!qrResult && qrResult.format === 'QR_CODE',
-            rawValue: qrResult ? qrResult.value : null,
-            url: qrResult && qrResult.value && /^https?:\/\//i.test(qrResult.value) ? qrResult.value : null
-          },
-          barcode: {
-            detected: !!barcodeResult && barcodeResult.format !== 'QR_CODE',
-            format: barcodeResult ? barcodeResult.format : null,
-            value: barcodeResult ? barcodeResult.value : null
-          },
+          qr: qrData,
+          barcode: barcodeData,
           ocr: {
             status: ocrStatus,
             rawText,
@@ -159,7 +171,23 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             error: ocrError
           },
           productInfo,
+          databaseVerification,
           errors: analysisErrors
+        };
+
+        setStatus('Running AI authenticity evaluation...');
+        const authStart = performance.now();
+        const authenticity = evaluateAuthenticity(partialResult);
+        const authenticityEvaluationTimeMs = performance.now() - authStart;
+
+        const result: ProductDetectionResult = {
+          ...partialResult,
+          processingTimeMs: Math.round(performance.now() - start),
+          timings: {
+            ...partialResult.timings!,
+            authenticityEvaluationTimeMs
+          },
+          authenticity
         };
 
         if (!cancelled) {

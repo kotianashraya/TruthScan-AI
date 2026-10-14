@@ -5,6 +5,7 @@ import ImagePreview from '@/components/scanner/ImagePreview';
 import ScannerInstructions from '@/components/scanner/ScannerInstructions';
 import ProductAnalyzer from '@/components/scanner/ProductAnalyzer';
 import ProductInfoCard from '@/components/scanner/ProductInfoCard';
+import ScanResultView from '@/components/scanner/ScanResultView';
 import { ProductDetectionResult } from '@/types/ProductDetectionResult';
 import { saveScan } from '@/services/scanService';
 import { useAuth } from '@/hooks/useAuth';
@@ -88,12 +89,12 @@ export default function ScannerPage() {
     setSaveState('saving');
     setSaveError(null);
     try {
-      await saveScan(currentUser.uid, result);
+      await saveScan(currentUser.uid, result, selected?.file);
       setSaveState('saved');
     } catch (saveFailure) {
       savedFileKey.current = null;
       setSaveState('failed');
-      setSaveError('The scan was analyzed, but it could not be saved. Please retry.');
+      setSaveError('The scan was analyzed, but it could not be saved to Firestore. Please retry.');
       console.error('[SCANNER] scan save failed', saveFailure);
     }
   };
@@ -137,24 +138,13 @@ export default function ScannerPage() {
               )}
 
               {state === 'completed' && analysisResult && (
-                <div>
-                  <div className="p-4 bg-white/5 rounded mb-4">
-                    <div className="text-sm">Analysis complete.</div>
-                    <div className="text-xs text-gray-400">Processing time: {analysisResult.processingTimeMs} ms</div>
-                    <div className="text-xs mt-1 text-gray-400">
-                      {saveState === 'saving' && 'Saving scan...'}
-                      {saveState === 'saved' && 'Scan saved to your history.'}
-                      {saveState === 'failed' && 'Scan save failed.'}
-                    </div>
-                    {saveState === 'failed' && (
-                      <div className="mt-3 flex items-center gap-3">
-                        <span className="text-xs text-rose-300">{saveError}</span>
-                        <button onClick={() => void saveAnalysis(analysisResult)} className="px-3 py-1 rounded bg-white/10 text-xs">Retry Save</button>
-                      </div>
-                    )}
-                  </div>
-                  <ProductInfoCard result={analysisResult} />
-                </div>
+                <ScanResultView
+                  result={analysisResult}
+                  onScanAgain={handleRemove}
+                  saveStatus={saveState}
+                  saveError={saveError}
+                  onRetrySave={() => void saveAnalysis(analysisResult)}
+                />
               )}
 
               {state === 'error' && (
