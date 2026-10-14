@@ -71,12 +71,37 @@ Visit `http://localhost:3000` to access the application.
 
 ---
 
-## AI / Firebase Deployment Notes
+## Free AI / Firebase Deployment
 
-Gemini vision is invoked through an authenticated Firebase callable function so
-the Gemini API key never ships to the browser. Configure the Firebase Functions
-secret `GEMINI_API_KEY` before deploying the functions. The optional
-`GEMINI_MODEL` parameter defaults to `gemini-3.8-flash`.
+TruthScan AI can run without enabling Firebase Blaze.
+
+- Firebase Spark is used for Authentication, Firestore, and Firebase Hosting.
+- Scan images are not uploaded to Firebase Storage by default.
+- Multimodal product vision runs through a separate Cloudflare Worker using
+  Google Gemma 4 vision on Workers AI.
+- Cloudflare Workers Free currently includes 100,000 Worker requests/day, and
+  Workers AI includes 10,000 neurons/day at no charge; once a free quota is
+  exhausted, requests fail rather than silently becoming paid usage.
+- No Gemini API key is required for the Cloudflare Workers AI path.
+
+After creating a free Cloudflare account and logging in with Wrangler:
+
+```bash
+cd workers/truthscan-vision
+npm install
+npx wrangler login
+npx wrangler deploy
+```
+
+Copy the resulting `https://<your-subdomain>.workers.dev` URL into
+`frontend/.env.local` as `VITE_AI_VISION_URL`, then rebuild the frontend.
+
+Firebase Spark deployment:
+
+```bash
+npm run build
+firebase deploy --only hosting,firestore:rules --project truthscan-ai-2eb39
+```
 
 ## Firebase / AI Deployment
 
