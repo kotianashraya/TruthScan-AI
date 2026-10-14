@@ -1,49 +1,66 @@
 rules_version = '2';
 
 service cloud.firestore {
-
   match /databases/{database}/documents {
 
-    match /scans/{scanId} {
-      allow read: if request.auth != null
-        && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid;
-      allow update: if request.auth != null
-        && resource.data.uid == request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
-      allow delete: if request.auth != null
-        && resource.data.uid == request.auth.uid;
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Existing waitlist functionality.
-    // Keep this unchanged for now.
-    match /waitlist_leads/{leadId} {
-      allow read, write: if true;
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // User profiles.
+    function isDocOwner() {
+      return isAuthenticated() && (
+        resource.data.uid == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+    }
+
+    function willBeDocOwner() {
+      return isAuthenticated() && (
+        request.resource.data.uid == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid
+      );
+    }
+
+    // User profiles - only the authenticated user can access their own document
     match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if isOwner(uid);
+    }
 
-      // A signed-in user can create only their own profile.
-      allow create:
-        if request.auth != null
-        && request.auth.uid == uid;
+    // Scans - user-scoped records only
+    match /scans/{scanId} {
+      allow read: if isDocOwner();
+      allow create: if willBeDocOwner();
+      allow update: if isDocOwner() && willBeDocOwner();
+      allow delete: if isDocOwner();
+    }
 
-      // A signed-in user can read only their own profile.
-      allow read:
-        if request.auth != null
-        && request.auth.uid == uid;
+    // Reports - user-scoped reports
+    match /reports/{reportId} {
+      allow read: if isDocOwner();
+      allow create: if willBeDocOwner();
+      allow update: if isDocOwner() && willBeDocOwner();
+      allow delete: if isDocOwner();
+    }
 
-      // A signed-in user can update only their own profile.
-      allow update:
-        if request.auth != null
-        && request.auth.uid == uid;
+    // Waitlist leads - public submissions only, NO public reading of emails
+    match /waitlist_leads/{leadId} {
+      allow create: if request.resource.data.email is string
+        && request.resource.data.email.size() > 5
+        && request.resource.data.email.size() < 254;
+      allow read, update, delete: if false;
+    }
 
-      // A signed-in user can delete only their own profile.
-      allow delete:
-        if request.auth != null
-        && request.auth.uid == uid;
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

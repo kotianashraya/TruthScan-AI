@@ -1,7 +1,31 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Placeholder policy. Storage is not yet used or deployed by this project.
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User-scoped scan image uploads
+    match /users/{userId}/scans/{fileName} {
+      // Allow read only to the owning user
+      allow read: if isOwner(userId);
+
+      // Allow upload only by owner, with file size < 10MB and image MIME type
+      allow create: if isOwner(userId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      // Allow deletion only by owner
+      allow delete: if isOwner(userId);
+    }
+
+    // Default deny for all other paths
     match /{allPaths=**} {
       allow read, write: if false;
     }
