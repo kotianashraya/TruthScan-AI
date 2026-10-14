@@ -1,5 +1,6 @@
 import type { AuthenticityResult } from './AuthenticityResult';
 import type { ProductVerificationResult } from './ProductDatabase';
+import type { VisionAssessment } from './VisionAssessment';
 
 export interface QRResult {
   detected: boolean;
@@ -64,5 +65,7 @@ export interface ProductDetectionResult {
   productInfo: ProductInfo;
   databaseVerification?: ProductVerificationResult;
   authenticity?: AuthenticityResult;
+  /** Server-side multimodal AI vision assessment; optional and non-authoritative. */
+  visionAssessment?: VisionAssessment;
   errors: string[];
 }
