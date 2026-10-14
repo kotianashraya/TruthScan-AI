@@ -19,6 +19,11 @@ import type { ScanRecord } from '@/types/ScanRecord';
 const scansCollection = collection(db, 'scans');
 
 export async function uploadScanImage(uid: string, file: File | Blob): Promise<string | null> {
+  // Firebase Cloud Storage requires Blaze after Feb 3, 2026.
+  // Keep image persistence optional so TruthScan remains usable on Firebase Spark.
+  const enabled = String(import.meta.env.VITE_ENABLE_CLOUD_IMAGE_STORAGE || '').toLowerCase() === 'true';
+  if (!enabled) return null;
+
   try {
     if (!storage) return null;
     const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.jpg`;
@@ -27,7 +32,6 @@ export async function uploadScanImage(uid: string, file: File | Blob): Promise<s
     await uploadBytes(storageRef, file, metadata);
     return await getDownloadURL(storageRef);
   } catch (error) {
-    // If storage is not enabled or network fails, log and continue safely
     console.warn('[STORAGE] image upload skipped or unavailable', error);
     return null;
   }
