@@ -27,7 +27,8 @@ Product Reference Catalog Verification (Deterministic Lookup)
   ├── Brand & variant catalog matching
   └── Anomaly detection (cross-brand barcode conflicts)
       ↓
-Server-Side Multimodal AI Vision Assessment (Gemini)
+Free Serverless Multimodal AI Vision (Cloudflare Workers AI)
+  ├── Google Gemma 4 vision model
   ├── Packaging consistency observations
   ├── Visible text / print anomalies
   ├── Visual warning indicators
@@ -58,10 +59,13 @@ Persistence & UI Presentation:
 ## Multimodal AI Vision Security
 
 The browser sends a normalized product image plus already-extracted OCR,
-barcode, QR, and product context to an authenticated Firebase callable
-function. The Gemini API key is stored as a Firebase Functions secret and is
-never bundled into the frontend.
+barcode, QR, and product context to a Cloudflare Worker. The Worker invokes
+Google Gemma 4 through the Workers AI binding, so no Gemini API key is needed.
 
 The vision result is supporting evidence only. It cannot certify authenticity
 or override hard deterministic contradictions such as an impossible date
 sequence or a verified barcode/brand conflict.
+
+The free deployment intentionally keeps Firebase on Spark: Authentication,
+Firestore, and Hosting remain on Firebase; Firebase Cloud Storage and
+Firebase Functions are not required for the default deployment path.
