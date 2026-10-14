@@ -27,6 +27,12 @@ Product Reference Catalog Verification (Deterministic Lookup)
   ├── Brand & variant catalog matching
   └── Anomaly detection (cross-brand barcode conflicts)
       ↓
+Server-Side Multimodal AI Vision Assessment (Gemini)
+  ├── Packaging consistency observations
+  ├── Visible text / print anomalies
+  ├── Visual warning indicators
+  └── Tamper observations
+      ↓
 AI Multi-Signal Authenticity Assessment Engine
   ├── 10-signal evidence aggregation
   ├── Date chronology checks (mfg vs expiry order)
@@ -47,3 +53,15 @@ Persistence & UI Presentation:
 1. **Observed Fact vs. Inference**: Missing signals (e.g. no barcode detected on front face) are explicitly stated as "No barcode detected", never falsely reported as "Invalid barcode".
 2. **Catalog Absence Rule**: Absence from the local reference database produces `UNKNOWN` / `UNABLE_TO_VERIFY`. It is never treated as evidence of a counterfeit product.
 3. **Null Preservation**: Unidentified fields strictly remain `null` or `undefined`.
+
+
+## Multimodal AI Vision Security
+
+The browser sends a normalized product image plus already-extracted OCR,
+barcode, QR, and product context to an authenticated Firebase callable
+function. The Gemini API key is stored as a Firebase Functions secret and is
+never bundled into the frontend.
+
+The vision result is supporting evidence only. It cannot certify authenticity
+or override hard deterministic contradictions such as an impossible date
+sequence or a verified barcode/brand conflict.
