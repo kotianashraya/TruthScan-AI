@@ -185,7 +185,42 @@ export function evaluateAuthenticity(result: ProductDetectionResult): Authentici
     limitations.push('Product is not currently registered in the local reference index. Absence from catalog does not mean counterfeit.');
   }
 
-  // 9. Normalized Score & Classification
+    // 9. Multimodal AI vision signal (supporting evidence only)
+  const vision = result.visionAssessment;
+  let visionConflict = false;
+  if (vision?.status === 'COMPLETED') {
+    observedEvidence.push(`AI vision assessment completed with ${vision.confidence}% confidence using ${vision.model ?? 'configured vision model'}.`);
+    if (vision.packagingConsistency === 'CONSISTENT') {
+      score += 6;
+      positiveIndicators.push('Multimodal vision model found the visible packaging internally consistent with the provided scan context.');
+    } else if (vision.packagingConsistency === 'INCONSISTENT') {
+      score = Math.max(0, score - 15);
+      visionConflict = true;
+      warningIndicators.push('Multimodal vision model observed visible packaging inconsistencies or anomalies.');
+    } else {
+      limitations.push('Multimodal vision could not confidently assess packaging consistency from this image.');
+    }
+
+    vision.positiveVisualIndicators.forEach(item => positiveIndicators.push(`AI vision: ${item}`));
+    vision.visualWarningIndicators.forEach(item => warningIndicators.push(`AI vision: ${item}`));
+    vision.visibleTextIssues.forEach(item => warningIndicators.push(`AI vision text issue: ${item}`));
+    vision.tamperEvidence.forEach(item => warningIndicators.push(`AI vision tamper observation: ${item}`));
+
+    if (vision.aiRiskHint === 'SUPPORTS_HIGH_RISK') {
+      score = Math.max(0, score - 8);
+      visionConflict = true;
+    } else if (vision.aiRiskHint === 'SUPPORTS_SUSPICIOUS') {
+      score = Math.max(0, score - 4);
+    } else if (vision.aiRiskHint === 'SUPPORTS_GENUINE' && vision.packagingConsistency === 'CONSISTENT') {
+      score += 4;
+    }
+
+    vision.limitations.forEach(item => limitations.push(`AI vision limitation: ${item}`));
+  } else if (vision?.status === 'FAILED' || vision?.status === 'UNAVAILABLE') {
+    limitations.push('Multimodal AI vision was unavailable for this scan; the result uses the deterministic optical and catalog evidence only.');
+  }
+
+// 9. Normalized Score & Classification
   const normalizedScore = Math.max(0, Math.min(100, score));
 
   // Determine Risk Level
@@ -194,12 +229,14 @@ export function evaluateAuthenticity(result: ProductDetectionResult): Authentici
   let explanation: string;
   let recommendation: string;
 
-  if (dateConflict || dbConflict) {
+  if (dateConflict || dbConflict || visionConflict) {
     riskLevel = 'HIGH_RISK';
     statusLabel = 'High Risk';
     explanation = dbConflict
       ? 'Significant contradictions were detected between barcode metadata and packaging typography, indicating elevated counterfeit risk.'
-      : 'Conflicting packaging dates detected (expiry precedes manufacturing date), suggesting packaging tampering or printing error.';
+      : dateConflict
+        ? 'Conflicting packaging dates were detected (expiry precedes manufacturing date), suggesting packaging tampering or printing error.'
+        : 'The multimodal vision assessment found significant visible packaging inconsistencies or high-risk visual signals.';
     recommendation = 'Do not consume or apply this product. Request verification from the brand manufacturer or return to the vendor.';
   } else if (normalizedScore >= 75 && (barcode.detected || qr.detected) && productInfo.brand && (productInfo.productName || productInfo.batchNumber)) {
     riskLevel = 'LIKELY_GENUINE';
