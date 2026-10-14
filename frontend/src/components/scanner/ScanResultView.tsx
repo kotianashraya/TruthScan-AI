@@ -300,6 +300,64 @@ export default function ScanResultView({
         </div>
       </div>
 
+      {/* Multimodal AI Vision Assessment */}
+      {result.visionAssessment?.status === 'COMPLETED' && (
+        <div className="p-5 bg-white/3 rounded-xl border border-cyan-500/20 space-y-3">
+          <h3 className="text-sm font-semibold text-cyan-300 uppercase tracking-wider">
+            AI Vision Assessment
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 bg-black/20 rounded border border-white/5">
+              <span className="text-gray-400 block">Model</span>
+              <span className="font-medium text-white">{result.visionAssessment.model || 'Configured model'}</span>
+            </div>
+            <div className="p-2.5 bg-black/20 rounded border border-white/5">
+              <span className="text-gray-400 block">AI Confidence</span>
+              <span className="font-medium text-white">{result.visionAssessment.confidence}%</span>
+            </div>
+            <div className="p-2.5 bg-black/20 rounded border border-white/5">
+              <span className="text-gray-400 block">Packaging Consistency</span>
+              <span className="font-medium text-white">{result.visionAssessment.packagingConsistency.replaceAll('_', ' ')}</span>
+            </div>
+            <div className="p-2.5 bg-black/20 rounded border border-white/5">
+              <span className="text-gray-400 block">AI Risk Hint</span>
+              <span className="font-medium text-white">{result.visionAssessment.aiRiskHint.replaceAll('_', ' ')}</span>
+            </div>
+          </div>
+
+          {result.visionAssessment.packagingObservations.length > 0 && (
+            <div>
+              <span className="text-gray-400 text-xs block mb-1">Visible Packaging Observations</span>
+              <ul className="space-y-1 text-xs text-gray-300 list-disc list-inside">
+                {result.visionAssessment.packagingObservations.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.visionAssessment.visibleTextIssues.length > 0 && (
+            <div>
+              <span className="text-amber-400 text-xs block mb-1">Visible Text Issues</span>
+              <ul className="space-y-1 text-xs text-gray-300 list-disc list-inside">
+                {result.visionAssessment.visibleTextIssues.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.visionAssessment.tamperEvidence.length > 0 && (
+            <div>
+              <span className="text-rose-400 text-xs block mb-1">Possible Tamper Observations</span>
+              <ul className="space-y-1 text-xs text-gray-300 list-disc list-inside">
+                {result.visionAssessment.tamperEvidence.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <p className="text-[11px] text-gray-500">
+            AI vision is supporting evidence only. It does not certify authenticity and cannot verify laboratory-level or hidden anti-counterfeit features from a 2D image.
+          </p>
+        </div>
+      )}
+
       {/* Indicators Breakdown: Positive vs Warning */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Positive Indicators */}
