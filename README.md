@@ -78,6 +78,20 @@ the Gemini API key never ships to the browser. Configure the Firebase Functions
 secret `GEMINI_API_KEY` before deploying the functions. The optional
 `GEMINI_MODEL` parameter defaults to `gemini-3.8-flash`.
 
+## Firebase / AI Deployment
+
+From the repository root, after authenticating with the Firebase CLI:
+
+```bash
+firebase use truthscan-ai-2eb39
+firebase functions:secrets:set GEMINI_API_KEY
+firebase deploy --only functions,firestore:rules,storage
+```
+
+The `GEMINI_API_KEY` secret must be supplied interactively or through the
+authorized deployment environment. Never commit it to GitHub or place it in
+frontend environment variables.
+
 ## Verification & Testing
 
 Run all automated quality checks:
