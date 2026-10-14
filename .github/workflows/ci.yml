@@ -1,0 +1,44 @@
+name: TruthScan AI CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install frontend
+        run: npm ci
+
+      - name: Test frontend
+        run: npm test
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Install Firebase Functions
+        working-directory: backend/functions
+        run: npm install
+
+      - name: Build Firebase Functions
+        working-directory: backend/functions
+        run: npm run build
