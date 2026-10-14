@@ -20,8 +20,10 @@ TruthScan AI is an evidence-based optical verification platform designed to comb
   - Matches scanned GTINs and brands against verified product profiles.
   - Strict rule: Catalog absence is never converted into counterfeit accusations (`UNKNOWN` / `UNABLE_TO_VERIFY`).
   - Detects true conflicts (e.g., barcode belonging to one brand on a box claiming another).
-- **AI Authenticity Engine**:
-  - Synthesizes 10 independent verification signals into an authenticity score (0–100) and risk level:
+- **Multimodal AI + Authenticity Engine**:
+  - Runs a secure server-side Gemini vision assessment on the scanned packaging image.
+  - Combines AI visual observations with OCR, QR/barcode, product parsing, catalog verification, and deterministic consistency checks.
+  - Synthesizes the evidence into an authenticity score (0–100) and risk level:
     - `LIKELY_GENUINE`: Consistent signals with no packaging anomalies.
     - `SUSPICIOUS`: Incomplete markers or partial verification.
     - `HIGH_RISK`: Strong contradictions (e.g. expiry precedes manufacturing date, barcode brand conflict).
@@ -68,6 +70,13 @@ npm run dev
 Visit `http://localhost:3000` to access the application.
 
 ---
+
+## AI / Firebase Deployment Notes
+
+Gemini vision is invoked through an authenticated Firebase callable function so
+the Gemini API key never ships to the browser. Configure the Firebase Functions
+secret `GEMINI_API_KEY` before deploying the functions. The optional
+`GEMINI_MODEL` parameter defaults to `gemini-3.8-flash`.
 
 ## Verification & Testing
 
