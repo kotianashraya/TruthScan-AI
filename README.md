@@ -103,19 +103,27 @@ npm run build
 firebase deploy --only hosting,firestore:rules --project truthscan-ai-2eb39
 ```
 
-## Firebase / AI Deployment
+## Production Deployment
 
-From the repository root, after authenticating with the Firebase CLI:
+TruthScan AI operates strictly on a **zero-cost / free-tier architecture**:
 
+### 1. Cloudflare Workers AI (Vision Engine)
 ```bash
-firebase use truthscan-ai-2eb39
-firebase functions:secrets:set GEMINI_API_KEY
-firebase deploy --only functions,firestore:rules,storage
+cd workers/truthscan-vision
+npm install
+npx wrangler deploy
+```
+The deployed Worker exposes an unauthenticated POST endpoint running `@cf/google/gemma-4-26b-a4b-it` under Cloudflare's free daily Neurons tier without any paid API keys.
+
+### 2. Firebase Spark Tier (Hosting & Firestore)
+```bash
+npm run build
+npx firebase deploy --only hosting,firestore:rules --project truthscan-ai-2eb39
 ```
 
-The `GEMINI_API_KEY` secret must be supplied interactively or through the
-authorized deployment environment. Never commit it to GitHub or place it in
-frontend environment variables.
+Live Production Endpoints:
+- **Web App**: [https://truthscan-ai-2eb39.web.app](https://truthscan-ai-2eb39.web.app) / [https://truthscan-ai-2eb39.firebaseapp.com](https://truthscan-ai-2eb39.firebaseapp.com)
+- **AI Vision Worker**: [https://truthscan-ai-vision.mountain-hospital.workers.dev](https://truthscan-ai-vision.mountain-hospital.workers.dev)
 
 ## Verification & Testing
 
@@ -125,8 +133,11 @@ Run all automated quality checks:
 # Run unit & integration tests
 npm test
 
-# Run TypeScript typechecks
+# Run TypeScript typechecks (frontend)
 npm run typecheck
+
+# Run TypeScript typechecks (AI worker)
+npm run ai:typecheck
 
 # Run production build
 npm run build
@@ -137,8 +148,8 @@ npm run build
 ## Security Model
 
 - **Firestore**: User-scoped data isolation (`users/{uid}`, `scans/{scanId}`, `reports/{reportId}`). Public read access to waitlist leads is blocked to prevent email scraping.
-- **Storage**: User-authenticated folder paths with MIME-type and 10MB file-size validation.
-- **Secrets**: No private API keys or service accounts exposed in frontend bundles.
+- **Zero Paid Storage Requirement**: Images processed client-side with base64 downsampling; cloud storage is disabled (`VITE_ENABLE_CLOUD_IMAGE_STORAGE="false"`), preventing paid Cloud Storage charges.
+- **Zero API Key Leakage**: No paid AI API keys exist in frontend bundles or repository code. Cloudflare Workers AI handles inference serverlessly.
 
 ---
 
