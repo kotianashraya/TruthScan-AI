@@ -130,7 +130,7 @@ export default {
       }, 200, origin);
     } catch (error) {
       console.error('[TruthScan AI] free Workers AI vision failure', error);
-      return jsonResponse({ status: 'FAILED', error: 'Free AI vision service is temporarily unavailable.' }, 503, origin);
+      return jsonResponse({ status: 'FAILED', error: String((error as any)?.message || error) }, 503, origin);
     }
   }
 };
