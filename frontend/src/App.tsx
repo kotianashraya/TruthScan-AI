@@ -71,10 +71,9 @@ export default function App() {
           </span>
         </Link>
 
-        {/* Navigation Section Links */}
         <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
           <button onClick={() => scrollToSection('features-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Features</button>
-          <button onClick={() => scrollToSection('live-demo-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Live Demo</button>
+          <button onClick={() => scrollToSection('live-demo-section')} className="text-gray-400 hover:text-white transition cursor-pointer">How It Works</button>
           <button onClick={() => scrollToSection('architecture-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Architecture</button>
           <button onClick={() => scrollToSection('roadmap-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Roadmap</button>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserScans } from '@/services/scanService';
+import { resolveScanRiskLevel } from '@/types/AuthenticityResult';
 
 export default function StatsCards() {
   const { currentUser } = useAuth();
@@ -8,6 +9,7 @@ export default function StatsCards() {
   const [genuine, setGenuine] = useState(0);
   const [suspicious, setSuspicious] = useState(0);
   const [highRisk, setHighRisk] = useState(0);
+  const [unableToVerify, setUnableToVerify] = useState(0);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -17,25 +19,27 @@ export default function StatsCards() {
         let gen = 0;
         let susp = 0;
         let risk = 0;
+        let unable = 0;
 
         docs.forEach(doc => {
-          const r = doc.riskLevel || doc.authenticity?.riskLevel;
-          const score = doc.authenticityScore ?? doc.authenticity?.authenticityScore;
-
-          if (r === 'LIKELY_GENUINE' || (score != null && score >= 75)) gen++;
-          else if (r === 'SUSPICIOUS' || (score != null && score >= 45)) susp++;
-          else if (r === 'HIGH_RISK' || (score != null && score > 0)) risk++;
+          const r = resolveScanRiskLevel(doc);
+          if (r === 'LIKELY_GENUINE') gen++;
+          else if (r === 'SUSPICIOUS') susp++;
+          else if (r === 'HIGH_RISK') risk++;
+          else unable++;
         });
 
         setTotal(docs.length);
         setGenuine(gen);
         setSuspicious(susp);
         setHighRisk(risk);
+        setUnableToVerify(unable);
       } catch (e) {
         setTotal(0);
         setGenuine(0);
         setSuspicious(0);
         setHighRisk(0);
+        setUnableToVerify(0);
       }
     };
     void load();
@@ -49,11 +53,12 @@ export default function StatsCards() {
   );
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Card label="Total Scans" value={total} colorClass="text-cyan-400" />
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <Card label="Total Scans" value={total} colorClass="text-white" />
       <Card label="Likely Genuine" value={genuine} colorClass="text-emerald-400" />
       <Card label="Suspicious Products" value={suspicious} colorClass="text-amber-400" />
       <Card label="High Risk Flags" value={highRisk} colorClass="text-rose-400" />
+      <Card label="Unable to Verify" value={unableToVerify} colorClass="text-cyan-400" />
     </div>
   );
 }

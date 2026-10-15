@@ -19,7 +19,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { formatScanDate, getUserScans } from '@/services/scanService';
 import type { ScanRecord } from '@/types/ScanRecord';
-import type { RiskLevel } from '@/types/AuthenticityResult';
+import { resolveScanRiskLevel, type RiskLevel } from '@/types/AuthenticityResult';
 
 export default function ReportsPage() {
   const { currentUser } = useAuth();
@@ -45,7 +45,7 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, [currentUser]);
 
-  // Real aggregate statistics based on actual user scans
+  // Real aggregate statistics based on actual user scans using deterministic risk levels
   const stats = useMemo(() => {
     let genuine = 0;
     let suspicious = 0;
@@ -54,12 +54,11 @@ export default function ReportsPage() {
     const brandsSet = new Set<string>();
 
     scans.forEach(scan => {
-      const risk = scan.riskLevel || scan.authenticity?.riskLevel;
-      const score = scan.authenticityScore ?? scan.authenticity?.authenticityScore;
+      const risk = resolveScanRiskLevel(scan);
 
-      if (risk === 'LIKELY_GENUINE' || (score != null && score >= 75)) genuine++;
-      else if (risk === 'SUSPICIOUS' || (score != null && score >= 45)) suspicious++;
-      else if (risk === 'HIGH_RISK' || (score != null && score > 0)) highRisk++;
+      if (risk === 'LIKELY_GENUINE') genuine++;
+      else if (risk === 'SUSPICIOUS') suspicious++;
+      else if (risk === 'HIGH_RISK') highRisk++;
       else unableToVerify++;
 
       if (scan.productInfo?.brand) brandsSet.add(scan.productInfo.brand.trim());
@@ -80,7 +79,11 @@ export default function ReportsPage() {
   };
 
   const handleExportJSON = (scan: ScanRecord) => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(scan, null, 2));
+    const exportPayload = {
+      ...scan,
+      resolvedRiskLevel: resolveScanRiskLevel(scan),
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
     downloadAnchor.setAttribute('download', `truthscan-report-${scan.id}.json`);
@@ -90,19 +93,15 @@ export default function ReportsPage() {
   };
 
   const getRiskDetails = (scan: ScanRecord) => {
-    const level: RiskLevel = scan.riskLevel ||
-      scan.authenticity?.riskLevel ||
-      (scan.authenticityScore != null && scan.authenticityScore >= 75 ? 'LIKELY_GENUINE' :
-       scan.authenticityScore != null && scan.authenticityScore >= 45 ? 'SUSPICIOUS' :
-       scan.authenticityScore != null && scan.authenticityScore > 0 ? 'HIGH_RISK' : 'UNABLE_TO_VERIFY');
+    const level: RiskLevel = resolveScanRiskLevel(scan);
 
     switch (level) {
       case 'LIKELY_GENUINE':
         return { label: 'Likely Genuine', badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: ShieldCheck, color: 'text-emerald-400' };
       case 'SUSPICIOUS':
-        return { label: 'Suspicious', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', icon: AlertTriangle, color: 'text-amber-400' };
+        return { label: 'Suspicious / Incomplete', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', icon: AlertTriangle, color: 'text-amber-400' };
       case 'HIGH_RISK':
-        return { label: 'High Risk', badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: ShieldAlert, color: 'text-rose-400' };
+        return { label: 'High Risk / Anomalies', badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: ShieldAlert, color: 'text-rose-400' };
       case 'UNABLE_TO_VERIFY':
       default:
         return { label: 'Unable to Verify', badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', icon: HelpCircle, color: 'text-cyan-400' };
@@ -140,8 +139,8 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Aggregate Metrics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Aggregate Metrics Cards: 5 Distinct Categories */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div className="p-4 bg-white/3 rounded-xl border border-white/10">
             <span className="text-xs text-gray-400">Total Reports</span>
             <div className="text-2xl font-bold mt-1 text-white">{stats.total}</div>
@@ -157,6 +156,10 @@ export default function ReportsPage() {
           <div className="p-4 bg-rose-500/5 rounded-xl border border-rose-500/20">
             <span className="text-xs text-rose-400">High Risk / Anomalies</span>
             <div className="text-2xl font-bold mt-1 text-rose-300">{stats.highRisk}</div>
+          </div>
+          <div className="p-4 bg-cyan-500/5 rounded-xl border border-cyan-500/20">
+            <span className="text-xs text-cyan-400">Unable to Verify</span>
+            <div className="text-2xl font-bold mt-1 text-cyan-300">{stats.unableToVerify}</div>
           </div>
         </div>
 

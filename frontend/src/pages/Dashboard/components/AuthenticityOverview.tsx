@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserScans } from '@/services/scanService';
+import { resolveScanRiskLevel } from '@/types/AuthenticityResult';
 
 export default function AuthenticityOverview() {
   const { currentUser } = useAuth();
@@ -17,12 +18,10 @@ export default function AuthenticityOverview() {
         let unverified = 0;
 
         docs.forEach(doc => {
-          const risk = doc.riskLevel || doc.authenticity?.riskLevel;
-          const score = doc.authenticityScore ?? doc.authenticity?.authenticityScore;
-
-          if (risk === 'LIKELY_GENUINE' || (score != null && score >= 75)) genuine++;
-          else if (risk === 'SUSPICIOUS' || (score != null && score >= 45)) suspicious++;
-          else if (risk === 'HIGH_RISK' || (score != null && score > 0)) highRisk++;
+          const risk = resolveScanRiskLevel(doc);
+          if (risk === 'LIKELY_GENUINE') genuine++;
+          else if (risk === 'SUSPICIOUS') suspicious++;
+          else if (risk === 'HIGH_RISK') highRisk++;
           else unverified++;
         });
 
@@ -40,7 +39,7 @@ export default function AuthenticityOverview() {
     <div className="p-5 bg-white/3 rounded-2xl border border-white/10 space-y-4">
       <h3 className="font-semibold text-sm text-gray-200 uppercase tracking-wider">Authenticity Overview</h3>
 
-      <div className="grid grid-cols-3 gap-2 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
           <div className="text-[11px] text-emerald-400 font-medium">Genuine</div>
           <div className="text-xl font-bold text-emerald-300 mt-0.5">{counts.genuine}</div>
@@ -57,6 +56,12 @@ export default function AuthenticityOverview() {
           <div className="text-[11px] text-rose-400 font-medium">High Risk</div>
           <div className="text-xl font-bold text-rose-300 mt-0.5">{counts.highRisk}</div>
           <div className="text-[10px] text-gray-400">{pct(counts.highRisk)}%</div>
+        </div>
+
+        <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
+          <div className="text-[11px] text-cyan-400 font-medium">Unverified</div>
+          <div className="text-xl font-bold text-cyan-300 mt-0.5">{counts.unverified}</div>
+          <div className="text-[10px] text-gray-400">{pct(counts.unverified)}%</div>
         </div>
       </div>
 

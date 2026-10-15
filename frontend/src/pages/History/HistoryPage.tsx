@@ -20,7 +20,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { deleteScan, formatScanDate, getUserScans } from '@/services/scanService';
 import type { ScanRecord } from '@/types/ScanRecord';
-import type { RiskLevel } from '@/types/AuthenticityResult';
+import { resolveScanRiskLevel, type RiskLevel } from '@/types/AuthenticityResult';
 
 export default function HistoryPage() {
   const { currentUser } = useAuth();
@@ -67,11 +67,7 @@ export default function HistoryPage() {
   };
 
   const getRiskInfo = (record: ScanRecord) => {
-    const level: RiskLevel = record.riskLevel ||
-      (record.authenticity?.riskLevel) ||
-      (record.authenticityScore != null && record.authenticityScore >= 75 ? 'LIKELY_GENUINE' :
-       record.authenticityScore != null && record.authenticityScore >= 45 ? 'SUSPICIOUS' :
-       record.authenticityScore != null && record.authenticityScore > 0 ? 'HIGH_RISK' : 'UNABLE_TO_VERIFY');
+    const level: RiskLevel = resolveScanRiskLevel(record);
 
     switch (level) {
       case 'LIKELY_GENUINE':
@@ -110,11 +106,8 @@ export default function HistoryPage() {
     return scans.filter(scan => {
       // Risk filter
       if (selectedRisk !== 'ALL') {
-        const info = getRiskInfo(scan);
-        if (selectedRisk === 'LIKELY_GENUINE' && info.label !== 'Likely Genuine') return false;
-        if (selectedRisk === 'SUSPICIOUS' && info.label !== 'Suspicious') return false;
-        if (selectedRisk === 'HIGH_RISK' && info.label !== 'High Risk') return false;
-        if (selectedRisk === 'UNABLE_TO_VERIFY' && info.label !== 'Unable to Verify') return false;
+        const level = resolveScanRiskLevel(scan);
+        if (selectedRisk !== level) return false;
       }
 
       // Search query

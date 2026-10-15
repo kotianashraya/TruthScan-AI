@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { formatScanDate, getUserScans } from '@/services/scanService';
 import type { ScanRecord } from '@/types/ScanRecord';
-import type { RiskLevel } from '@/types/AuthenticityResult';
+import { resolveScanRiskLevel, type RiskLevel } from '@/types/AuthenticityResult';
 
 export default function RecentScans() {
   const { currentUser } = useAuth();
@@ -23,11 +23,7 @@ export default function RecentScans() {
   }, [currentUser]);
 
   const getRiskBadge = (scan: ScanRecord) => {
-    const level: RiskLevel = scan.riskLevel ||
-      scan.authenticity?.riskLevel ||
-      (scan.authenticityScore != null && scan.authenticityScore >= 75 ? 'LIKELY_GENUINE' :
-       scan.authenticityScore != null && scan.authenticityScore >= 45 ? 'SUSPICIOUS' :
-       scan.authenticityScore != null && scan.authenticityScore > 0 ? 'HIGH_RISK' : 'UNABLE_TO_VERIFY');
+    const level: RiskLevel = resolveScanRiskLevel(scan);
 
     switch (level) {
       case 'LIKELY_GENUINE':
@@ -38,7 +34,7 @@ export default function RecentScans() {
         return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">High Risk</span>;
       case 'UNABLE_TO_VERIFY':
       default:
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Unverified</span>;
+        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Unable to Verify</span>;
     }
   };
 
