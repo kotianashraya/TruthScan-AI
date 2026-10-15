@@ -10,33 +10,23 @@ import ReportsPage from '@/pages/Reports/ReportsPage';
 import ProfilePage from '@/pages/Profile/ProfilePage';
 import SettingsPage from '@/pages/Settings/SettingsPage';
 import ProtectedRoute from './ProtectedRoute';
-import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/firebase';
-
-function HomeEntry() {
-  const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return <div className="min-h-screen bg-[#030712] text-gray-400 flex items-center justify-center font-mono text-sm">Loading secure session...</div>;
-  }
-
-  return currentUser ?? auth.currentUser ? <DashboardPage /> : <App />;
-}
 
 export default function AppRoutes() {
-  return <Routes>
-    <Route path="/" element={<HomeEntry />} />
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/signup" element={<SignupPage />} />
-    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-    <Route element={<ProtectedRoute />}>
-      <Route path="/dashboard" element={<Navigate to="/" replace />} />
-      <Route path="/scanner" element={<ScannerPage />} />
-      <Route path="/history" element={<HistoryPage />} />
-      <Route path="/reports" element={<ReportsPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-    </Route>
-    <Route path="*" element={<App />} />
-  </Routes>;
+  return (
+    <Routes>
+      <Route path="/" element={<App />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/scanner" element={<ScannerPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }

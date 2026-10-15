@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/firebase';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 
 export default function ProtectedRoute() {
   const { currentUser, loading } = useAuth();
@@ -15,6 +16,6 @@ export default function ProtectedRoute() {
   const authenticatedUser = currentUser ?? auth.currentUser;
 
   return authenticatedUser
-    ? <Outlet />
+    ? <AuthenticatedLayout><Outlet /></AuthenticatedLayout>
     : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarcodeFormat } from '@zxing/library';
 import { SelectedFile } from './ScannerUpload';
-import { detectBarcodeFromImage } from '@/services/scanner/barcodeService';
+import { detectBarcodeFromImage, detectBarcodeWithDiagnostics } from '@/services/scanner/barcodeService';
 import { performOCR } from '@/services/scanner/ocrService';
 import { parseProductInfo } from '@/services/scanner/productParser';
 import { verifyAgainstDatabase } from '@/services/scanner/productDatabase';
@@ -27,9 +27,17 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
         const img = document.createElement('img');
         img.src = file.url;
         await new Promise<void>((resolve, reject) => {
+          if (img.complete && img.naturalWidth > 0) return resolve();
           img.onload = () => resolve();
           img.onerror = () => reject(new Error('Image failed to load'));
         });
+        if ('decode' in img) {
+          try {
+            await (img as any).decode();
+          } catch {
+            // Non-fatal if already loaded
+          }
+        }
         const imageLoadingTimeMs = performance.now() - imageLoadStart;
 
         setStatus('Scanning QR code...');
@@ -38,9 +46,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
         try {
           qrResult = await detectBarcodeFromImage(img, [BarcodeFormat.QR_CODE]);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          analysisErrors.push(`QR detection failed: ${message}`);
-          setErrors([...analysisErrors]);
+          console.debug('[Scanner] QR detection skipped or inconclusive:', error);
         }
         const qrDetectionTimeMs = performance.now() - qrStart;
         if (!qrResult) console.debug('[Scanner] QR not detected; continuing to barcode');
@@ -49,7 +55,7 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
         const barcodeStart = performance.now();
         let barcodeResult = null;
         try {
-          barcodeResult = await detectBarcodeFromImage(img, [
+          const { result, diagnostics } = await detectBarcodeWithDiagnostics(img, [
             BarcodeFormat.AZTEC,
             BarcodeFormat.CODABAR,
             BarcodeFormat.CODE_39,
@@ -67,9 +73,19 @@ export default function ProductAnalyzer({ file, onComplete }: { file: SelectedFi
             BarcodeFormat.UPC_EAN_EXTENSION,
             BarcodeFormat.MAXICODE
           ]);
+          barcodeResult = result;
+          if (result) {
+            console.info('[Scanner] Barcode detected:', result.format, result.value);
+          } else {
+            console.debug('[Scanner] Barcode not detected across supported orientations/crops:', diagnostics);
+          }
+          if (diagnostics.status === 'FAILED') {
+            analysisErrors.push(diagnostics.userMessage);
+            setErrors([...analysisErrors]);
+          }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          analysisErrors.push(`Barcode detection failed: ${message}`);
+          console.warn('[Scanner] Barcode detection encountered an issue:', error);
+          analysisErrors.push('Barcode processing encountered an issue. We continued with other verification signals.');
           setErrors([...analysisErrors]);
         }
         const barcodeDetectionTimeMs = performance.now() - barcodeStart;

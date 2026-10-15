@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   ShieldAlert, Sparkles, ChevronRight, Play, Check, 
-  Layers, Lock, ExternalLink, Globe, HelpCircle, ArrowUpRight
+  Layers, Lock, ExternalLink, Globe, HelpCircle, ArrowUpRight,
+  Scan, LayoutDashboard, LogIn, UserPlus
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/firebase';
 import AICoreSphere from './components/AICoreSphere';
 import LiveScanner from './components/LiveScanner';
 import VisionArchitecture from './components/VisionArchitecture';
@@ -11,6 +15,8 @@ import Roadmap from './components/Roadmap';
 import WaitlistModal from './components/WaitlistModal';
 
 export default function App() {
+  const { currentUser } = useAuth();
+  const isAuthenticated = Boolean(currentUser ?? auth.currentUser);
   const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
   const [heroAuthenticityScore, setHeroAuthenticityScore] = useState(0);
 
@@ -48,39 +54,68 @@ export default function App() {
       <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.04),transparent_60%)] pointer-events-none" />
 
       {/* FLOATING GLASS ISLAND NAVIGATION BAR */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-5xl rounded-full glass-panel border border-white/10 px-6 py-3 flex items-center justify-between shadow-2xl backdrop-blur-md">
-        {/* Glowing Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-cyan to-brand-violet flex items-center justify-center shadow-lg shadow-cyan-500/25">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-5xl rounded-full glass-panel border border-white/10 px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-2xl backdrop-blur-md">
+        {/* Glowing Logo - Routes to /dashboard if logged in, / if logged out */}
+        <Link
+          to={isAuthenticated ? "/dashboard" : "/"}
+          onClick={() => {
+            if (!isAuthenticated) window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="flex items-center gap-2 group cursor-pointer"
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-cyan to-brand-violet flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 transition">
             <span className="font-display font-black text-sm text-gray-950">TS</span>
           </div>
           <span className="font-display font-bold tracking-tight text-lg text-white">
             TruthScan <span className="text-brand-cyan text-xs font-mono font-bold uppercase ml-1">AI</span>
           </span>
-        </div>
+        </Link>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+        {/* Navigation Section Links */}
+        <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
           <button onClick={() => scrollToSection('features-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Features</button>
           <button onClick={() => scrollToSection('live-demo-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Live Demo</button>
           <button onClick={() => scrollToSection('architecture-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Architecture</button>
           <button onClick={() => scrollToSection('roadmap-section')} className="text-gray-400 hover:text-white transition cursor-pointer">Roadmap</button>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => scrollToSection('live-demo-section')}
-            className="hidden sm:inline-block px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-xs font-semibold cursor-pointer transition"
-          >
-            Launch Live Scan
-          </button>
-          <button 
-            onClick={() => setIsWaitlistOpen(true)}
-            className="px-4 py-1.5 rounded-full bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 text-xs font-bold shadow-lg shadow-cyan-500/20 cursor-pointer transition transform hover:scale-[1.03]"
-          >
-            Join Waitlist
-          </button>
+        {/* Action Buttons: Logged In vs Logged Out */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {isAuthenticated ? (
+            <>
+              <Link 
+                to="/scanner"
+                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-semibold transition"
+              >
+                <Scan className="w-3.5 h-3.5" />
+                <span>Scan Product</span>
+              </Link>
+              <Link 
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 text-xs font-bold shadow-lg shadow-cyan-500/20 transition transform hover:scale-[1.03]"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link 
+                to="/login"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition"
+              >
+                <LogIn className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Login</span>
+              </Link>
+              <Link 
+                to="/signup"
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 text-xs font-bold shadow-lg shadow-cyan-500/20 transition transform hover:scale-[1.03]"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Get Started</span>
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -102,18 +137,43 @@ export default function App() {
             AI-powered real-time authenticity verification for skincare, beauty, and luxury products. Safeguard cosmetics integrity in sub-seconds.
           </p>
 
-          <div className="flex flex-wrap gap-4 pt-2">
+          <div className="flex flex-wrap gap-3 sm:gap-4 pt-2">
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/scanner"
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-violet hover:from-cyan-400 hover:to-violet-500 text-gray-900 font-semibold text-sm flex items-center gap-2 transition shadow-lg shadow-cyan-500/25 transform hover:scale-[1.02]"
+                >
+                  Start Scanning <ChevronRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center gap-2 transition"
+                >
+                  Open Dashboard <ArrowUpRight className="w-4 h-4 text-cyan-400" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/signup"
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-violet hover:from-cyan-400 hover:to-violet-500 text-gray-900 font-semibold text-sm flex items-center gap-2 transition shadow-lg shadow-cyan-500/25 transform hover:scale-[1.02]"
+                >
+                  Start Scanning <ChevronRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/login"
+                  className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center gap-2 transition"
+                >
+                  Sign In <ArrowUpRight className="w-4 h-4 text-cyan-400" />
+                </Link>
+              </>
+            )}
             <button
               onClick={() => scrollToSection('live-demo-section')}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-violet hover:from-cyan-400 hover:to-violet-500 text-gray-900 font-semibold text-sm flex items-center gap-2 cursor-pointer transition shadow-lg shadow-cyan-500/25"
+              className="px-5 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-gray-300 font-medium text-sm flex items-center gap-2 transition"
             >
-              Try Live Demo <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => scrollToSection('architecture-section')}
-              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center gap-2 cursor-pointer transition"
-            >
-              <Play className="w-3.5 h-3.5" /> Watch Vision Architecture
+              <Play className="w-3.5 h-3.5 text-cyan-400" /> Interactive Demo
             </button>
           </div>
 
@@ -235,12 +295,27 @@ export default function App() {
             Deploy TruthScan AI sub-second verification pipelines into your supply-chain, retail checkout, or mobile customer experiences.
           </p>
 
-          <div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className="px-8 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 font-bold text-sm shadow-xl shadow-cyan-500/25 transition transform hover:scale-[1.03]"
+              >
+                Go to Workspace Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/signup"
+                className="px-8 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 font-bold text-sm shadow-xl shadow-cyan-500/25 transition transform hover:scale-[1.03]"
+              >
+                Create Free Account
+              </Link>
+            )}
             <button
               onClick={() => setIsWaitlistOpen(true)}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-500 text-gray-900 font-bold text-sm shadow-xl shadow-cyan-500/25 cursor-pointer transition transform hover:scale-[1.03]"
+              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white font-semibold text-sm transition"
             >
-              Secure Priority Onboarding Waitlist
+              Enterprise Waitlist
             </button>
           </div>
 

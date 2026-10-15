@@ -1,5 +1,5 @@
 import { LogOut, Home, Search, FileText, User, Settings2 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Sidebar() {
@@ -9,13 +9,13 @@ export default function Sidebar() {
   return (
     <aside className="w-72 bg-[#07101a]/60 text-white h-screen p-4 hidden md:flex flex-col justify-between">
       <div>
-        <div className="mb-8 px-2">
-          <h2 className="font-display text-xl text-brand-cyan">TruthScan AI</h2>
+        <Link to="/dashboard" className="mb-8 px-2 block group">
+          <h2 className="font-display text-xl text-brand-cyan group-hover:brightness-110 transition">TruthScan AI</h2>
           <p className="text-xs text-gray-400 mt-1">Product Authenticity Platform</p>
-        </div>
+        </Link>
 
         <nav className="space-y-1">
-          <NavLink to="/" end className={navClass}>
+          <NavLink to="/dashboard" end className={navClass}>
             <Home className="w-4 h-4 text-cyan-400" /> <span>Dashboard</span>
           </NavLink>
           <NavLink to="/scanner" className={navClass}>
