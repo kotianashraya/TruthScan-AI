@@ -52,9 +52,9 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     }`;
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#030712] text-white font-sans flex flex-col md:flex-row print:bg-white print:text-black print:block print:min-h-0">
       {/* DESKTOP SIDEBAR */}
-      <aside className="w-64 bg-[#07101a]/80 border-r border-white/10 text-white h-screen sticky top-0 p-5 hidden md:flex flex-col justify-between z-30 backdrop-blur-md">
+      <aside className="w-64 bg-[#07101a]/80 border-r border-white/10 text-white h-screen sticky top-0 p-5 hidden md:flex flex-col justify-between z-30 backdrop-blur-md print:hidden">
         <div>
           {/* Logo Navigation to Authenticated Home (/dashboard) */}
           <Link to="/dashboard" className="flex items-center gap-2 mb-8 px-1 group">
@@ -108,7 +108,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
       </aside>
 
       {/* MOBILE HEADER (Phones & Tablets) */}
-      <header className="md:hidden sticky top-0 z-40 bg-[#07101a]/95 border-b border-white/10 backdrop-blur-md px-4 py-3 flex items-center justify-between">
+      <header className="md:hidden sticky top-0 z-40 bg-[#07101a]/95 border-b border-white/10 backdrop-blur-md px-4 py-3 flex items-center justify-between print:hidden">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-cyan to-brand-violet flex items-center justify-center shadow-md shadow-cyan-500/25">
             <span className="font-display font-black text-xs text-gray-950">TS</span>
@@ -189,7 +189,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
       )}
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto print:overflow-visible print:bg-white print:text-black print:p-0 print:m-0">
         {children}
       </main>
     </div>
