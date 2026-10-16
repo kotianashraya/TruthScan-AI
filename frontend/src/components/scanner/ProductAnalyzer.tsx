@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BarcodeFormat } from '@zxing/library';
 import { SelectedFile } from './ScannerUpload';
 import { detectBarcodeWithDiagnostics, type DetectedBarcode } from '@/services/scanner/barcodeService';
-import { performOCR } from '@/services/scanner/ocrService';
+import { performOCR, type OCRRotation } from '@/services/scanner/ocrService';
 import { parseProductInfo } from '@/services/scanner/productParser';
 import { verifyAgainstDatabase } from '@/services/scanner/productDatabase';
 import { evaluateAuthenticity } from '@/services/scanner/authenticityEngine';
@@ -13,7 +13,8 @@ import {
   ProductInfo,
   BarcodeResult,
   QRResult,
-  OCRResult
+  OCRResult,
+  MultiFaceDiagnostics
 } from '@/types/ProductDetectionResult';
 
 export interface ProductAnalyzerProps {
@@ -47,23 +48,29 @@ async function analyzeFace(
     }
   }
   const imageLoadingTimeMs = performance.now() - imageLoadStart;
+  const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
 
-  // 1. QR Detection
+  // 1. QR Detection (with multi-rotation attempts)
   onStatus(`Scanning QR code on ${faceLabel}...`);
   const qrStart = performance.now();
   let qrResult: DetectedBarcode | null = null;
+  let qrDiagnostics = null;
   try {
-    const { result } = await detectBarcodeWithDiagnostics(img, [BarcodeFormat.QR_CODE]);
+    const { result, diagnostics } = await detectBarcodeWithDiagnostics(img, [BarcodeFormat.QR_CODE]);
     qrResult = result;
+    qrDiagnostics = diagnostics;
   } catch (err) {
     console.debug(`[Scanner] QR detection on ${faceLabel} skipped:`, err);
   }
   const qrDetectionTimeMs = performance.now() - qrStart;
 
-  // 2. Barcode Detection
+  // 2. Barcode Detection (with bounded full, crop, and multi-rotation attempts)
   onStatus(`Scanning barcode on ${faceLabel}...`);
   const barcodeStart = performance.now();
   let barcodeResult: DetectedBarcode | null = null;
+  let barcodeDiagnostics = null;
+  let rotationHint: OCRRotation = 0;
+
   try {
     const { result, diagnostics } = await detectBarcodeWithDiagnostics(img, [
       BarcodeFormat.AZTEC,
@@ -84,11 +91,22 @@ async function analyzeFace(
       BarcodeFormat.MAXICODE
     ]);
     barcodeResult = result;
+    barcodeDiagnostics = diagnostics;
+
+    // If barcode was successfully decoded at a specific rotation, pass that hint to OCR!
+    const successfulAttempt = diagnostics.attempts.find(a => a.status === 'SUCCESS');
+    if (successfulAttempt) {
+      if (successfulAttempt.step === 'ROTATE_180') rotationHint = 180;
+      else if (successfulAttempt.step === 'ROTATE_90_CW') rotationHint = 90;
+      else if (successfulAttempt.step === 'ROTATE_90_CCW') rotationHint = 270;
+    }
+
     if (result) {
-      console.info(`[Scanner] Barcode detected on ${faceLabel}:`, result.format, result.value);
+      console.info(`[Scanner] Barcode detected on ${faceLabel}:`, result.format, result.value, `(rotation: ${rotationHint}°)`);
     } else {
       console.debug(`[Scanner] Barcode not detected on ${faceLabel}:`, diagnostics.status);
     }
+
     if (diagnostics.status === 'FAILED') {
       analysisErrors.push(`${faceLabel}: ${diagnostics.userMessage}`);
     }
@@ -98,17 +116,21 @@ async function analyzeFace(
   }
   const barcodeDetectionTimeMs = performance.now() - barcodeStart;
 
-  // 3. OCR Text Extraction
+  // 3. OCR Text Extraction (with orientation-aware multi-rotation scoring)
   onStatus(`Extracting text from ${faceLabel}...`);
   let ocrResult = null;
   let ocrError: string | null = null;
   let ocrProcessingTimeMs = 0;
   try {
     const ocrStart = performance.now();
-    ocrResult = await performOCR(selected.file, (progress, progressStatus) => {
-      const pct = Math.round(Math.max(0, Math.min(1, progress || 0)) * 100);
-      if (pct > 0) onStatus(`${faceLabel} OCR: ${pct}%`);
-    });
+    ocrResult = await performOCR(
+      selected.file,
+      (progress) => {
+        const pct = Math.round(Math.max(0, Math.min(1, progress || 0)) * 100);
+        if (pct > 0) onStatus(`${faceLabel} OCR: ${pct}%`);
+      },
+      { rotationHint }
+    );
     ocrProcessingTimeMs = performance.now() - ocrStart;
   } catch (err) {
     console.error(`[OCR] error on ${faceLabel}`, err);
@@ -120,8 +142,11 @@ async function analyzeFace(
   const productInfo = rawText.trim() ? parseProductInfo(rawText) : {};
 
   return {
+    dimensions,
     qrResult,
+    qrDiagnostics,
     barcodeResult,
+    barcodeDiagnostics,
     ocrResult,
     ocrError,
     ocrProcessingTimeMs,
@@ -171,7 +196,7 @@ export default function ProductAnalyzer({
           );
         }
 
-        // Merge Barcode signals: Prioritize 1D barcode detected on either face
+        // Merge Barcode signals: Prioritize 1D commercial retail barcode detected on either face
         const detectedBarcode = (face2?.barcodeResult && face2.barcodeResult.format !== 'QR_CODE')
           ? face2.barcodeResult
           : (face1.barcodeResult && face1.barcodeResult.format !== 'QR_CODE')
@@ -217,29 +242,32 @@ export default function ProductAnalyzer({
           rawText: combinedRawText,
           confidence: avgConfidence,
           durationMs: face1.ocrProcessingTimeMs + (face2?.ocrProcessingTimeMs ?? 0),
+          rotationUsed: face1.ocrResult?.rotationUsed,
           error: face1.ocrError || face2?.ocrError || null
         };
 
-        // Merge Product Information (Front brand/name + Rear batch/dates/price)
+        // Merge Product Information (Front brand/name + Rear batch/dates/price/barcode)
         const p1 = face1.productInfo;
         const p2 = face2?.productInfo ?? {};
+        const parsedCombined = combinedRawText ? parseProductInfo(combinedRawText) : {};
+
         const mergedProductInfo: ProductInfo = {
-          brand: p1.brand || p2.brand || null,
-          productName: p1.productName || p2.productName || null,
-          productType: p1.productType || p2.productType || null,
-          variant: p1.variant || p2.variant || null,
-          quantity: p1.quantity || p2.quantity || null,
-          netWeight: p1.netWeight || p2.netWeight || null,
-          volume: p1.volume || p2.volume || null,
-          manufacturer: p1.manufacturer || p2.manufacturer || null,
-          countryOfOrigin: p1.countryOfOrigin || p2.countryOfOrigin || null,
-          batchNumber: p2.batchNumber || p1.batchNumber || null,
-          lotNumber: p2.lotNumber || p1.lotNumber || null,
-          mrp: p2.mrp || p1.mrp || null,
-          manufacturingDate: p2.manufacturingDate || p1.manufacturingDate || null,
-          expiryDate: p2.expiryDate || p1.expiryDate || null,
-          detectedDate: p2.detectedDate || p1.detectedDate || null,
-          ingredients: Array.from(new Set([...(p1.ingredients || []), ...(p2.ingredients || [])]))
+          brand: p1.brand || p2.brand || parsedCombined.brand || null,
+          productName: p1.productName || p2.productName || parsedCombined.productName || null,
+          productType: p1.productType || p2.productType || parsedCombined.productType || null,
+          variant: p1.variant || p2.variant || parsedCombined.variant || null,
+          quantity: p1.quantity || p2.quantity || parsedCombined.quantity || null,
+          netWeight: p1.netWeight || p2.netWeight || parsedCombined.netWeight || null,
+          volume: p1.volume || p2.volume || parsedCombined.volume || null,
+          manufacturer: p1.manufacturer || p2.manufacturer || parsedCombined.manufacturer || null,
+          countryOfOrigin: p1.countryOfOrigin || p2.countryOfOrigin || parsedCombined.countryOfOrigin || null,
+          batchNumber: p2.batchNumber || p1.batchNumber || parsedCombined.batchNumber || null,
+          lotNumber: p2.lotNumber || p1.lotNumber || parsedCombined.lotNumber || null,
+          mrp: p2.mrp || p1.mrp || parsedCombined.mrp || null,
+          manufacturingDate: p2.manufacturingDate || p1.manufacturingDate || parsedCombined.manufacturingDate || null,
+          expiryDate: p2.expiryDate || p1.expiryDate || parsedCombined.expiryDate || null,
+          detectedDate: p2.detectedDate || p1.detectedDate || parsedCombined.detectedDate || null,
+          ingredients: Array.from(new Set([...(p1.ingredients || []), ...(p2.ingredients || []), ...(parsedCombined.ingredients || [])]))
         };
 
         // Database Catalog Check
@@ -277,6 +305,51 @@ export default function ProductAnalyzer({
           };
         }
 
+        // Developer Diagnostics recording for both faces and merged evidence
+        const diagnostics: MultiFaceDiagnostics = {
+          faces: [
+            {
+              faceIndex: 0,
+              label: 'Face 1 (Front / Label)',
+              dimensions: face1.dimensions,
+              orientation: face1.ocrResult?.rotationUsed != null ? `${face1.ocrResult.rotationUsed}°` : '0°',
+              ocrRawText: face1.rawText,
+              ocrConfidence: face1.ocrResult?.confidence,
+              ocrRotationUsed: face1.ocrResult?.rotationUsed,
+              barcodeResult: face1.barcodeResult ? { detected: true, format: face1.barcodeResult.format, value: face1.barcodeResult.value } : null,
+              qrResult: face1.qrResult ? { detected: true, rawValue: face1.qrResult.value } : null
+            },
+            ...(face2 ? [{
+              faceIndex: 1,
+              label: 'Face 2 (Back / Barcode / QR)',
+              dimensions: face2.dimensions,
+              orientation: face2.ocrResult?.rotationUsed != null ? `${face2.ocrResult.rotationUsed}°` : '0°',
+              ocrRawText: face2.rawText,
+              ocrConfidence: face2.ocrResult?.confidence,
+              ocrRotationUsed: face2.ocrResult?.rotationUsed,
+              barcodeResult: face2.barcodeResult ? { detected: true, format: face2.barcodeResult.format, value: face2.barcodeResult.value } : null,
+              qrResult: face2.qrResult ? { detected: true, rawValue: face2.qrResult.value } : null
+            }] : [])
+          ],
+          merged: {
+            rawOCR: combinedRawText,
+            brand: mergedProductInfo.brand,
+            product: mergedProductInfo.productName,
+            quantity: mergedProductInfo.quantity,
+            barcode: barcodeData.value,
+            qr: qrData.rawValue,
+            batch: mergedProductInfo.batchNumber,
+            expiry: mergedProductInfo.expiryDate,
+            mrp: mergedProductInfo.mrp
+          }
+        };
+
+        console.group('[TRUTHSCAN DIAGNOSTICS] Multi-Face Analysis');
+        console.log('Face 1:', diagnostics.faces[0]);
+        if (diagnostics.faces[1]) console.log('Face 2:', diagnostics.faces[1]);
+        console.log('Merged Signals:', diagnostics.merged);
+        console.groupEnd();
+
         // Authenticity Engine Evaluation
         setStatus('Evaluating product authenticity signals...');
         const authStart = performance.now();
@@ -300,7 +373,8 @@ export default function ProductAnalyzer({
           productInfo: mergedProductInfo,
           databaseVerification,
           visionAssessment,
-          errors: analysisErrors
+          errors: analysisErrors,
+          diagnostics
         };
 
         const authenticity = evaluateAuthenticity(partialResult);

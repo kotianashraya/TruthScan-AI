@@ -123,6 +123,31 @@ export const VERIFIED_PRODUCT_CATALOG: VerifiedProductRecord[] = [
     typicalBatchPattern: /^[0-9A-Z]{6,10}$/i,
     keyIngredients: ['Hyaluronic Acid', 'Glycerin'],
     features: ['Oil-Free', 'Non-Comedogenic']
+  },
+  {
+    id: 'nyk-wgt-cnd',
+    brand: 'Nykaa',
+    productName: 'Weightless Leave-in Conditioner',
+    variant: 'Argan + Frizz Control',
+    barcode: '8904245714399',
+    category: 'Haircare',
+    manufacturer: 'FSN E-Commerce Ventures Ltd. / Nykaa E-Retail',
+    typicalBatchPattern: /^[A-Z0-9]{4,10}$/i,
+    keyIngredients: ['Argan Oil', 'Mango Butter', 'Ginseng Root Extract'],
+    features: ['Weightless', 'Frizz Control']
+  },
+  {
+    id: 'him-lip-blm',
+    brand: 'Himalaya',
+    productName: 'Lip Balm',
+    variant: 'Wheatgerm Oil & Carrot Seed Oil',
+    barcode: '8901138501198',
+    category: 'Personal Care',
+    manufacturer: 'The Himalaya Drug Company',
+    typicalBatchPattern: /^[A-Z0-9]{4,10}$/i,
+    priceRange: { min: 35, max: 60, currency: '₹' },
+    keyIngredients: ['Wheatgerm Oil', 'Carrot Seed Oil'],
+    features: ['Nourishes', 'Prevents Drying and Chapping']
   }
 ];
 

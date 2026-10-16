@@ -48,4 +48,22 @@ describe('Product Database Verification Layer', () => {
     expect(result.status).toBe('UNKNOWN');
     expect(result.brandMatched).toBe(false);
   });
+
+  it('recognizes Nykaa Leave-in Conditioner and Himalaya Lip Balm in the verified catalog', () => {
+    const nykaaRes = verifyAgainstDatabase(
+      { brand: 'Nykaa', productName: 'Weightless Leave-in Conditioner' },
+      { detected: false }
+    );
+    expect(nykaaRes.status).toBe('PARTIAL_MATCH');
+    expect(nykaaRes.brandMatched).toBe(true);
+    expect(nykaaRes.matchedRecord?.productName).toBe('Weightless Leave-in Conditioner');
+
+    const himalayaRes = verifyAgainstDatabase(
+      { brand: 'Himalaya', productName: 'Lip Balm' },
+      { detected: true, format: 'EAN_13', value: '8901138501198' }
+    );
+    expect(himalayaRes.status).toBe('MATCHED');
+    expect(himalayaRes.brandMatched).toBe(true);
+    expect(himalayaRes.barcodeMatched).toBe(true);
+  });
 });

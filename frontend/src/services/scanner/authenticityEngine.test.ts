@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateAuthenticity } from './authenticityEngine';
 import type { ProductDetectionResult } from '@/types/ProductDetectionResult';
+import { resolveScanRiskLevel } from '@/types/AuthenticityResult';
 
 function mockResult(overrides: Partial<ProductDetectionResult> = {}): ProductDetectionResult {
   return {
@@ -114,5 +115,32 @@ describe('TruthScan AI Authenticity Engine', () => {
     // Must NOT be marked HIGH_RISK just because it's not in the database!
     expect(assessment.riskLevel).not.toBe('HIGH_RISK');
     expect(assessment.verificationLimitations.some(l => l.includes('Absence from catalog does not mean counterfeit'))).toBe(true);
+  });
+
+  describe('resolveScanRiskLevel Universal Classifier', () => {
+    it('never inflates UNABLE_TO_VERIFY to HIGH_RISK, even with score 8/100', () => {
+      const scan = {
+        authenticityScore: 8,
+        riskLevel: 'UNABLE_TO_VERIFY',
+        verdict: 'UNABLE_TO_VERIFY'
+      };
+      expect(resolveScanRiskLevel(scan)).toBe('UNABLE_TO_VERIFY');
+    });
+
+    it('classifies hard fails as HIGH_RISK', () => {
+      const scan = {
+        authenticityScore: 10,
+        hardFails: ['Barcode database mismatch']
+      };
+      expect(resolveScanRiskLevel(scan)).toBe('HIGH_RISK');
+    });
+
+    it('classifies high score genuine scans as LIKELY_GENUINE', () => {
+      const scan = {
+        authenticityScore: 92,
+        verdict: 'GENUINE'
+      };
+      expect(resolveScanRiskLevel(scan)).toBe('LIKELY_GENUINE');
+    });
   });
 });

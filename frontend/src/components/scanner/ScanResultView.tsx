@@ -448,6 +448,25 @@ export default function ScanResultView({
               </div>
             </div>
 
+            {/* Multi-Face Optical Diagnostics */}
+            {result.diagnostics && result.diagnostics.faces.length > 1 && (
+              <div>
+                <span className="text-gray-400 block mb-1.5 font-medium">Multi-Face Packaging Evidence Breakdown:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.diagnostics.faces.map((f, idx) => (
+                    <div key={idx} className="p-2.5 rounded bg-black/30 border border-white/5 space-y-1 text-[11px] font-mono">
+                      <div className="text-cyan-300 font-semibold">{f.label}</div>
+                      <div className="text-gray-400">Dimensions: {f.dimensions ? `${f.dimensions.width}×${f.dimensions.height} px` : 'N/A'}</div>
+                      <div className="text-gray-400">Orientation: {f.orientation}</div>
+                      <div className="text-gray-400">OCR: {f.ocrConfidence != null ? `${Math.round(f.ocrConfidence * 100)}%` : 'N/A'} (rot: {f.ocrRotationUsed ?? 0}°)</div>
+                      <div className="text-gray-400">Barcode: {f.barcodeResult?.detected ? `${f.barcodeResult.format}: ${f.barcodeResult.value}` : 'None'}</div>
+                      <div className="text-gray-400">QR: {f.qrResult?.detected ? 'Detected' : 'None'}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Observed Evidence Log */}
             {auth?.evidence && auth.evidence.length > 0 && (
               <div>

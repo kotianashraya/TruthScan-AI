@@ -19,6 +19,7 @@ export interface OCRResult {
   rawText: string;
   confidence?: number | null;
   durationMs?: number;
+  rotationUsed?: number;
   error?: string | null;
 }
 
@@ -42,6 +43,33 @@ export interface ProductInfo {
   expiryDate?: string | null;
   manufacturingDate?: string | null;
   detectedDate?: string | null;
+}
+
+export interface FaceDiagnostics {
+  faceIndex: number;
+  label: string;
+  dimensions?: { width: number; height: number };
+  orientation?: number | string;
+  ocrRawText?: string;
+  ocrConfidence?: number | null;
+  ocrRotationUsed?: number;
+  barcodeResult?: BarcodeResult | null;
+  qrResult?: QRResult | null;
+}
+
+export interface MultiFaceDiagnostics {
+  faces: FaceDiagnostics[];
+  merged: {
+    rawOCR: string;
+    brand?: string | null;
+    product?: string | null;
+    quantity?: string | null;
+    barcode?: string | null;
+    qr?: string | null;
+    batch?: string | null;
+    expiry?: string | null;
+    mrp?: string | null;
+  };
 }
 
 export interface ProductDetectionResult {
@@ -68,4 +96,5 @@ export interface ProductDetectionResult {
   /** Server-side multimodal AI vision assessment; optional and non-authoritative. */
   visionAssessment?: VisionAssessment;
   errors: string[];
+  diagnostics?: MultiFaceDiagnostics;
 }

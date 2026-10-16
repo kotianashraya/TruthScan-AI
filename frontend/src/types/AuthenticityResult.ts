@@ -1,65 +1,65 @@
-export type RiskLevel =
-  | 'LIKELY_GENUINE'
-  | 'SUSPICIOUS'
-  | 'HIGH_RISK'
-  | 'UNABLE_TO_VERIFY';
-
-export type AuthenticityStatus =
-  | 'likely_authentic'
-  | 'suspicious'
-  | 'high_risk'
-  | 'insufficient_evidence'
-  | RiskLevel;
+export type RiskLevel = 'LIKELY_GENUINE' | 'SUSPICIOUS' | 'HIGH_RISK' | 'UNABLE_TO_VERIFY';
 
 export interface AuthenticityResult {
-  /** Authenticity score from 0 to 100 */
-  authenticityScore: number;
-  /** Primary risk classification */
-  riskLevel: RiskLevel;
-  /** Confidence in the assessment (0 to 100) */
-  confidence: number;
-  /** Human-readable status label */
-  status: string;
-  /** Neutral, fact-grounded explanation */
-  explanation: string;
-  /** Signals indicating consistency or expected markers */
-  positiveIndicators: string[];
-  /** Signals indicating anomalies, missing standard markers, or conflicts */
-  warningIndicators: string[];
-  /** List of observed factual evidence */
-  evidence: string[];
-  /** Limitations of optical & digital verification */
-  verificationLimitations: string[];
-  /** Actionable recommendation for user */
-  recommendation: string;
-
-  // Backwards compatibility fields
   score: number;
-  positiveEvidence: string[];
-  warnings: string[];
-  riskFactors: string[];
+  authenticityScore: number;
+  confidence: number;
+  status: string;
+  riskLevel: RiskLevel;
+  verdictLabel?: string;
+  summary?: string;
+  explanation?: string;
+  recommendation?: string;
+  evidence: string[];
+  positiveIndicators: string[];
+  warningIndicators: string[];
+  hardFails?: string[];
+  anomalies?: string[];
+  verificationLimitations: string[];
+  breakdown?: {
+    category: string;
+    score: number;
+    maxScore: number;
+    details: string;
+  }[];
+  positiveEvidence?: string[];
+  warnings?: string[];
+  riskFactors?: string[];
 }
 
+/**
+ * Universal deterministic risk resolver.
+ * Ensures UNABLE_TO_VERIFY is NEVER conflated with HIGH_RISK.
+ * High Risk requires an actual contradiction / hard conflict (e.g., date impossibility,
+ * barcode brand mismatch), whereas missing signals or lack of database catalog record
+ * cleanly yield UNABLE_TO_VERIFY or SUSPICIOUS.
+ */
 export function resolveScanRiskLevel(scan: {
   riskLevel?: string | null;
   authenticityStatus?: string | null;
-  authenticity?: { riskLevel?: string | null; status?: string | null } | null;
+  authenticity?: { riskLevel?: string | null; status?: string | null; hardFails?: string[] | null } | null;
   authenticityScore?: number | null;
   score?: number | null;
+  hardFails?: string[] | null;
+  verdict?: string | null;
 } | null | undefined): RiskLevel {
   if (!scan) return 'UNABLE_TO_VERIFY';
 
-  const raw = (scan.riskLevel || scan.authenticity?.riskLevel || '').toUpperCase().trim();
-  if (raw === 'LIKELY_GENUINE' || raw === 'LIKELY_AUTHENTIC') return 'LIKELY_GENUINE';
+  const raw = (scan.riskLevel || scan.authenticity?.riskLevel || scan.verdict || '').toUpperCase().trim();
+  if (raw === 'LIKELY_GENUINE' || raw === 'LIKELY_AUTHENTIC' || raw === 'GENUINE') return 'LIKELY_GENUINE';
   if (raw === 'SUSPICIOUS') return 'SUSPICIOUS';
-  if (raw === 'HIGH_RISK') return 'HIGH_RISK';
+  if (raw === 'HIGH_RISK' || raw === 'COUNTERFEIT') return 'HIGH_RISK';
   if (raw === 'UNABLE_TO_VERIFY' || raw === 'INSUFFICIENT_EVIDENCE' || raw === 'UNVERIFIED') return 'UNABLE_TO_VERIFY';
 
   const status = (scan.authenticityStatus || scan.authenticity?.status || '').toLowerCase().trim();
   if (status.includes('genuine') || status.includes('authentic')) return 'LIKELY_GENUINE';
   if (status.includes('suspicious') || status.includes('incomplete')) return 'SUSPICIOUS';
-  if (status.includes('high risk') || status.includes('anomalies')) return 'HIGH_RISK';
+  if (status.includes('high risk') || status.includes('anomalies') || status.includes('counterfeit')) return 'HIGH_RISK';
   if (status.includes('unable') || status.includes('insufficient') || status.includes('unverified')) return 'UNABLE_TO_VERIFY';
+
+  // Check hard fails (e.g. date conflict, barcode database mismatch)
+  const fails = scan.hardFails || scan.authenticity?.hardFails;
+  if (fails && fails.length > 0) return 'HIGH_RISK';
 
   // Fallback solely if no risk string is available:
   // Low score without a confirmed anomaly conflict must NEVER become HIGH_RISK!
